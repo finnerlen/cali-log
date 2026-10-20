@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cali Log</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cali Log">
+<meta name="theme-color" content="#05070C">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* Look: telemetry HUD on deep space black. Glass panels, segmented meters, glowing data lines. Single dark world by design. */
+:root {
+  --bg: #05070C;
+  --bg-2: #0B1020;
+  --surface: rgba(18, 24, 40, .62);
+  --surface-2: rgba(255, 255, 255, .045);
+  --line: rgba(150, 170, 255, .13);
+  --line-2: rgba(150, 170, 255, .24);
+  --dim: rgba(150, 165, 200, .16);
+  --ink: #EEF2FF;
+  --muted: #8B94AB;
+  --accent: #3D7BFF;
+  --accent-2: #8B5CFF;
+  --accent-ink: #FFFFFF;
+  --glow: rgba(61, 123, 255, .5);
+  --ex-pu: #4C8DFF;
+  --ex-dip: #B07CFF;
+  --ex-push: #2FD8E8;
+  --ex-other: #F2C14E;
+  --ok: #35E08C; --warn: #FFB547; --bad: #FF4D5E;
+  --ok-bg: rgba(53, 224, 140, .1); --warn-bg: rgba(255, 181, 71, .1); --bad-bg: rgba(255, 77, 94, .1);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r: 18px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.45;
+  padding-left: max(14px, env(safe-area-inset-left, 0px));
+  padding-right: max(14px, env(safe-area-inset-right, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(75% 45% at 30% -12%, rgba(61, 123, 255, .16), transparent 72%),
+    radial-gradient(60% 40% at 80% 45%, rgba(139, 92, 255, .10), transparent 72%),
+    radial-gradient(70% 40% at 50% 110%, rgba(47, 216, 232, .08), transparent 70%),
+    var(--bg);
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); background: rgba(5, 7, 12, .8); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); z-index: 10; }
+.wrap { max-width: 680px; margin: 0 auto; display: grid; gap: 14px; }
+header.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; padding: 14px 0 10px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: linear-gradient(180deg, rgba(5, 7, 12, .92) 60%, rgba(5, 7, 12, 0));
+}
+h1 { font-size: 1.3rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin: 0; display: flex; align-items: center; gap: 10px; }
+h1::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--glow), 0 0 2px #fff inset; flex: none; }
+h2 { font-size: .78rem; font-weight: 700; margin: 0; letter-spacing: .14em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+h3 { font-size: 1rem; font-weight: 650; margin: 0; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: .86rem; }
+.xs { font-size: .74rem; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .84em; }
+.label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .4; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.card {
+  position: relative; display: grid; gap: 12px; min-width: 0; padding: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .012) 40%), var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 8px 24px rgba(0, 0, 0, .22);
+}
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.between { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--line); background: rgba(255, 255, 255, .05); border-radius: 12px; padding: 9px 14px;
+  font-weight: 600; min-height: 40px; color: var(--ink); transition: background .15s, box-shadow .15s;
+}
+.btn:active { background: rgba(255, 255, 255, .1); }
+.btn.primary {
+  background: linear-gradient(135deg, #3D7BFF, #6B5CFF); color: #fff; border-color: rgba(255, 255, 255, .14);
+  box-shadow: 0 6px 22px rgba(61, 123, 255, .38), inset 0 1px 0 rgba(255, 255, 255, .25); font-weight: 700; letter-spacing: .02em;
+}
+.btn.danger { color: var(--bad); border-color: rgba(255, 77, 94, .45); background: var(--bad-bg); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+.btn.sm { padding: 5px 11px; min-height: 32px; font-size: .84rem; border-radius: 10px; }
+.btn.block { width: 100%; }
+.icon-btn { border: 0; background: transparent; color: var(--muted); font-size: 1.3rem; line-height: 1; padding: 6px 8px; min-height: 36px; }
+input[type="text"], input[type="number"], input[type="date"], input[type="password"], select, textarea {
+  background: rgba(255, 255, 255, .04); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  width: 100%; min-width: 0; font-size: 16px; color: var(--ink); transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(61, 123, 255, .18), 0 0 18px rgba(61, 123, 255, .18); }
+input::placeholder, textarea::placeholder { color: rgba(139, 148, 171, .7); }
+textarea { min-height: 70px; resize: vertical; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 10px; font-size: .74rem; font-weight: 700;
+  letter-spacing: .04em; border: 1px solid var(--line); background: rgba(255, 255, 255, .05); white-space: nowrap;
+}
+.chip.ok { color: var(--ok); border-color: rgba(53, 224, 140, .4); background: var(--ok-bg); }
+.chip.warn { color: var(--warn); border-color: rgba(255, 181, 71, .4); background: var(--warn-bg); }
+.chip.bad { color: var(--bad); border-color: rgba(255, 77, 94, .45); background: var(--bad-bg); }
+.sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none; box-shadow: 0 0 8px currentColor; }
+.empty { text-align: center; padding: 26px 16px; justify-items: center; }
+.up { color: var(--ok); } .down { color: var(--bad); } .flat { color: var(--warn); }
+
+/* home */
+.hero { padding: 26px 2px 4px; display: grid; gap: 6px; }
+h1.hello { font-size: 2.3rem; font-weight: 800; letter-spacing: -.03em; text-transform: none; line-height: 1.05; display: block; color: var(--muted); }
+h1.hello::before { display: none; }
+h1.hello span { background: linear-gradient(90deg, #FFFFFF, #9DB8FF 55%, #B98CFF); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 1.35em; filter: drop-shadow(0 0 18px rgba(61, 123, 255, .35)); }
+.quote { padding: 20px 18px 22px; border-color: rgba(120, 140, 255, .28);
+  background: radial-gradient(120% 90% at 0% 0%, rgba(61, 123, 255, .22), transparent 60%), radial-gradient(90% 90% at 100% 100%, rgba(139, 92, 255, .18), transparent 60%), var(--surface);
+  box-shadow: 0 0 40px rgba(61, 123, 255, .14), inset 0 1px 0 rgba(255, 255, 255, .08); overflow: hidden; }
+.quote::before { content: "\201E"; position: absolute; right: 14px; top: -34px; font-size: 7rem; font-weight: 800; color: rgba(139, 160, 255, .12); line-height: 1; pointer-events: none; }
+.quote .q { font-size: 1.28rem; font-weight: 650; line-height: 1.35; letter-spacing: -.01em; text-wrap: balance; }
+.todo { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.todo:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.todo > div { display: grid; min-width: 0; }
+.tick { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .8rem; font-weight: 800; color: #04140B; background: var(--ok); box-shadow: 0 0 12px rgba(53, 224, 140, .55); }
+.tick.open { background: transparent; border: 1.5px dashed var(--line-2); box-shadow: none; }
+.shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sc { border: 1px solid var(--line); border-radius: var(--r); padding: 14px 8px 12px; display: grid; justify-items: center; gap: 3px; text-align: center; cursor: pointer; color: var(--ink); min-width: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .015)), var(--surface); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
+.sc:active { border-color: var(--accent); box-shadow: 0 0 18px rgba(61, 123, 255, .35); }
+.sc .ic { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 4px; color: #9DB8FF;
+  background: radial-gradient(circle at 50% 30%, rgba(61, 123, 255, .35), rgba(61, 123, 255, .08)); border: 1px solid rgba(120, 150, 255, .3); box-shadow: 0 0 16px rgba(61, 123, 255, .25); }
+.sc .ic svg { width: 22px; height: 22px; filter: drop-shadow(0 0 4px rgba(61, 123, 255, .8)); }
+.sc b { font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; }
+.sc span:last-child { font-size: .7rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+
+/* HUD */
+.hud { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.kpi { padding: 12px; gap: 6px; }
+.kpi .v { font-family: var(--font-num); font-size: 1.75rem; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: .55em; font-weight: 600; color: var(--muted); margin-left: 2px; letter-spacing: 0; }
+.kpi .s { font-size: .72rem; color: var(--muted); }
+.segs { display: flex; gap: 3px; }
+.segs i { flex: 1; height: 5px; border-radius: 2px; background: var(--dim); }
+.segs i.on { background: var(--accent); box-shadow: 0 0 8px var(--glow); }
+.segs i.on.ok { background: var(--ok); box-shadow: 0 0 8px rgba(53, 224, 140, .5); }
+@media (max-width: 380px) { .kpi .v { font-size: 1.45rem; } }
+
+/* templates */
+.tpls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tpl {
+  text-align: left; border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 4px; min-height: 96px;
+  background: linear-gradient(160deg, rgba(61, 123, 255, .14), rgba(139, 92, 255, .06) 60%, rgba(255, 255, 255, .02)), var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); color: var(--ink);
+}
+.tpl b { font-size: .95rem; letter-spacing: .06em; text-transform: uppercase; }
+.tpl:active { border-color: var(--accent); box-shadow: 0 0 20px rgba(61, 123, 255, .3); }
+.tpl.free { border-style: dashed; background: transparent; }
+
+/* editor */
+.block { border-left: 0; overflow: hidden; }
+.block::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--bc, var(--accent)); box-shadow: 0 0 12px var(--bc, var(--accent)); }
+.sets { display: grid; gap: 6px; }
+.set { display: grid; grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr) 34px; gap: 6px; align-items: center; }
+.set .n { font-size: .78rem; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.set .in { position: relative; }
+.set .in input { padding-right: 40px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.set .in span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: .74rem; color: var(--muted); pointer-events: none; text-transform: uppercase; letter-spacing: .06em; }
+.last { background: rgba(255, 255, 255, .035); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; font-size: .8rem; color: var(--muted); }
+.quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 6px; align-items: end; }
+.wbox { display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 10px; }
+.rgrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.rc { border: 1px solid var(--line); background: rgba(255, 255, 255, .04); border-radius: 12px; padding: 6px 0 7px; display: grid; justify-items: center; min-width: 0; color: var(--ink); }
+.rc span { font-size: .62rem; color: var(--muted); letter-spacing: .1em; }
+.rc b { font-family: var(--font-num); font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.rc.ghost { border-style: dashed; opacity: .55; }
+.rc.on { border-color: var(--accent); background: rgba(61, 123, 255, .14); box-shadow: 0 0 16px rgba(61, 123, 255, .35), inset 0 0 0 1px var(--accent); }
+.rc.up b { color: var(--ok); text-shadow: 0 0 10px rgba(53, 224, 140, .5); } .rc.dn b { color: var(--bad); text-shadow: 0 0 10px rgba(255, 77, 94, .5); }
+.rstep { display: grid; grid-template-columns: 1fr 52px 60px 52px; gap: 8px; align-items: center; }
+.rstep .btn { font-size: 1.3rem; padding: 4px 0; }
+.rstep .rv { font-size: 1.8rem; font-weight: 800; text-align: center; }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  background: rgba(16, 22, 38, .92); border: 1px solid var(--line-2); color: var(--ink); padding: 11px 16px; border-radius: 14px;
+  max-width: min(92vw, 460px); font-size: .9rem; box-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 0 24px rgba(61, 123, 255, .2);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+}
+
+/* history */
+.hist-item { display: grid; gap: 6px; }
+.hist-line { font-size: .86rem; display: flex; gap: 6px; align-items: baseline; min-width: 0; flex-wrap: wrap; }
+.hist-line .mono { overflow-wrap: anywhere; }
+
+/* progress */
+.verdict { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+.verdict .big { font-family: var(--font-num); font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; text-shadow: 0 0 24px currentColor; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.seg { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, .03); overflow-x: auto; }
+.seg button { flex: 1; white-space: nowrap; border: 0; border-radius: 10px; background: transparent; color: var(--muted); padding: 7px 8px; font-size: .8rem; font-weight: 600; letter-spacing: .03em; }
+.seg button[aria-pressed="true"] { background: linear-gradient(135deg, rgba(61, 123, 255, .9), rgba(107, 92, 255, .9)); color: #fff; box-shadow: 0 0 16px rgba(61, 123, 255, .4); }
+.prs { display: grid; gap: 8px; }
+.pr { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.pr:last-child { border-bottom: 0; padding-bottom: 0; }
+.tbl { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.tbl td, .tbl th { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl th { font-size: .64rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+.tbl td.r, .tbl th.r { text-align: right; }
+
+/* coach */
+.chat { display: grid; gap: 10px; }
+.msg { border-radius: 16px; padding: 11px 13px; max-width: 92%; overflow-wrap: anywhere; font-size: .94rem; }
+.msg.user { justify-self: end; background: linear-gradient(135deg, #3D7BFF, #6B5CFF); color: #fff; box-shadow: 0 6px 20px rgba(61, 123, 255, .3); }
+.msg.assistant { justify-self: start; background: var(--surface); border: 1px solid var(--line); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.msg.err { justify-self: stretch; background: var(--bad-bg); color: var(--bad); border: 1px solid rgba(255, 77, 94, .45); max-width: 100%; }
+.msg ul { margin: 4px 0; padding-left: 18px; }
+.msg p + p { margin-top: 6px; }
+.composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.composer textarea { min-height: 46px; max-height: 160px; }
+
+/* body */
+.bar2 { height: 8px; background: repeating-linear-gradient(90deg, var(--dim) 0 7px, transparent 7px 10px); }
+.bar2 i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--ok) 0 7px, transparent 7px 10px); filter: drop-shadow(0 0 5px rgba(53, 224, 140, .6)); }
+.goal { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; }
+.gauge { width: 100%; max-width: 150px; height: auto; display: block; overflow: visible; }
+.goal-side { display: grid; gap: 8px; min-width: 0; }
+.goal-side .stat { display: flex; justify-content: space-between; gap: 8px; font-size: .84rem; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.goal-side .stat:last-of-type { border-bottom: 0; }
+@media (max-width: 380px) { .goal { grid-template-columns: 120px 1fr; } }
+.tip { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+.tip .chip { margin-top: 1px; }
+.pthumb { width: 56px; height: 56px; object-fit: cover; border-radius: 12px; border: 1px solid var(--line-2); cursor: pointer; }
+.pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ptile { border: 0; padding: 0; background: transparent; display: grid; gap: 4px; min-width: 0; color: var(--ink); }
+.ptile img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 14px; display: block; max-width: 100%; border: 1px solid var(--line); }
+.ptile span { font-size: .7rem; color: var(--muted); letter-spacing: .04em; }
+.overlay {
+  position: fixed; inset: 0; z-index: 40; background: rgba(5, 7, 12, .96); overflow-y: auto;
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) max(14px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(14px, env(safe-area-inset-left, 0px));
+}
+.pcomp { display: grid; gap: 8px; max-width: 680px; margin: 0 auto; }
+.pcomp.two { grid-template-columns: 1fr 1fr; }
+.pcomp figure { margin: 0; display: grid; gap: 4px; min-width: 0; }
+.pcomp img { width: 100%; border-radius: 14px; display: block; max-width: 100%; border: 1px solid var(--line); }
+.pcomp figcaption { font-size: .78rem; color: var(--muted); text-align: center; letter-spacing: .04em; }
+
+/* tab bar: floating glass dock */
+nav.tabs {
+  position: fixed; z-index: 20; display: grid; grid-template-columns: repeat(6, 1fr);
+  left: max(10px, env(safe-area-inset-left, 0px)); right: max(10px, env(safe-area-inset-right, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-width: 640px; margin: 0 auto;
+  background: rgba(14, 19, 32, .78); border: 1px solid var(--line-2); border-radius: 24px; padding: 6px 4px;
+  -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+nav.tabs button { border: 0; background: transparent; padding: 6px 0 5px; display: grid; justify-items: center; gap: 3px; font-size: .6rem; color: var(--muted); font-weight: 700; min-width: 0; letter-spacing: .04em; border-radius: 16px; }
+nav.tabs button svg { width: 22px; height: 22px; }
+nav.tabs button[aria-current="page"] { color: #fff; background: rgba(61, 123, 255, .16); }
+nav.tabs button[aria-current="page"] svg { color: #7FA8FF; filter: drop-shadow(0 0 6px rgba(61, 123, 255, .9)); }
+@media (max-width: 380px) { .quick { grid-template-columns: repeat(3, minmax(0, 1fr)); } .quick .btn { grid-column: 1 / -1; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<nav class="tabs" id="tabs" aria-label="Bereiche"></nav>
+
+<script>
+(() => {
+"use strict";
+const KEY = "cali-log-v1";
+const DAY = 86400000;
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const parseISO = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+const WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const fmtD = (s) => { const d = parseISO(s); return d ? WD[d.getDay()] + " " + pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." : s; };
+const fmtShort = (s) => { const d = parseISO(s); return d ? pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." : s; };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = (v, d = 1) => (v == null || isNaN(v) ? "–" : Number(v).toLocaleString("de-DE", { maximumFractionDigits: d }));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+const isRounds = (label) => /^(emom|zirkel)/i.test(String(label || "").trim());
+const fitLen = (arr, n) => (arr.length >= n ? arr.slice(0, n) : arr.concat(Array(n - arr.length).fill(arr[arr.length - 1] || 0)));
+// +1 Wdh. auf die schwächste Runde, bei Gleichstand die früheste: 7×10 -> 8,7,7… -> 8,8,7…; verpasste Runden werden zuerst aufgefüllt
+function progressRounds(arr) {
+  const s = arr.slice(); const i = s.indexOf(Math.min(...s)); s[i]++; return s;
+}
+const isW = (label) => /^w(-?pyramide|\d+)$/i.test(String(label || "").trim());
+// W-Pyramide: Spitze 4 -> 4-3-2-1-2-3-4-3-2-1-2-3-4
+function wPyramid(peak) {
+  const p = Math.max(1, Math.min(20, Math.round(peak))), s = [];
+  for (let i = p; i >= 1; i--) s.push(i);
+  for (let i = 2; i <= p; i++) s.push(i);
+  for (let i = p - 1; i >= 1; i--) s.push(i);
+  for (let i = 2; i <= p; i++) s.push(i);
+  return s;
+}
+const kgTxt = (v) => String(v).replace(".", ",");
+const num = (v) => { if (v === "" || v == null) return null; const n = Number(String(v).replace(",", ".")); return isFinite(n) ? n : null; };
+
+// ---------------- data ----------------
+const DEFAULT_EX = [
+  { id: "pu", name: "Klimmzüge", color: "var(--ex-pu)" },
+  { id: "dip", name: "Dips", color: "var(--ex-dip)" },
+  { id: "push", name: "Liegestütze", color: "var(--ex-push)" },
+];
+const DEFAULT_TPL = [
+  { id: "mo", name: "Mo · EMOM", note: "10 Min. EMOM", blocks: [
+    { ex: "pu", label: "EMOM", n: 10, reps: null, kg: 0 }, { ex: "dip", label: "EMOM", n: 10, reps: null, kg: 0 }, { ex: "push", label: "EMOM", n: 10, reps: null, kg: 0 } ] },
+  { id: "mi", name: "Mi · Zirkel", note: "10 Runden", blocks: [
+    { ex: "pu", label: "Zirkel", n: 10, reps: null, kg: 0 }, { ex: "dip", label: "Zirkel", n: 10, reps: null, kg: 0 }, { ex: "push", label: "Zirkel", n: 10, reps: null, kg: 0 } ] },
+  { id: "fr", name: "Fr · Schwer", note: "Gewichtet + W-Pyramiden", blocks: [
+    { ex: "pu", label: "Gewichtet", n: 3, reps: null, kg: 15 }, { ex: "dip", label: "Gewichtet", n: 3, reps: null, kg: 25 },
+    { ex: "pu", label: "W-Pyramide", peak: 4, n: 13, reps: null, kg: 0 }, { ex: "dip", label: "W-Pyramide", peak: 6, n: 21, reps: null, kg: 0 } ] },
+];
+function fresh() {
+  return { v: 1, exercises: DEFAULT_EX.slice(), templates: JSON.parse(JSON.stringify(DEFAULT_TPL)), workouts: [], draft: null,
+    settings: { bw: null, apiKey: "", model: "claude-haiku-5-5", name: "Finn" }, chat: [],
+    body: { goal: { startKg: 77, kg: 70, date: "2026-12-31" }, entries: {} } };
+}
+let S;
+try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY) || "null") || {}); } catch (e) { S = fresh(); }
+S.settings = Object.assign(fresh().settings, S.settings || {});
+S.body = Object.assign(fresh().body, S.body || {}); S.body.entries = S.body.entries || {};
+// Migration: alte Labels "W4"/"W6" -> "W-Pyramide" mit Spitze
+(S.templates || []).forEach((t) => t.blocks.forEach((b) => { const m = /^W(\d+)$/i.exec(b.label || ""); if (m) { b.label = "W-Pyramide"; b.peak = +m[1]; } }));
+(S.workouts || []).forEach((w) => w.blocks.forEach((b) => { if (/^W\d+$/i.test(b.label || "")) b.label = "W-Pyramide"; }));
+if (S.draft) S.draft.blocks.forEach((b) => { const m = /^W(\d+)$/i.exec(b.label || ""); if (m) { b.label = "W-Pyramide"; b.peak = b.peak || +m[1]; } });
+let saveT = null;
+function save(now) {
+  clearTimeout(saveT);
+  const w = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast("Speichern fehlgeschlagen: Speicher voll? Bitte Backup exportieren."); } };
+  if (now) w(); else saveT = setTimeout(w, 300);
+}
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+const exById = (id) => S.exercises.find((e) => e.id === id) || { id, name: id, color: "var(--ex-other)" };
+const sorted = () => S.workouts.slice().sort((a, b) => (a.date === b.date ? a.created - b.created : a.date < b.date ? -1 : 1));
+const blockReps = (b) => sum(b.sets.map((s) => s.reps || 0));
+const setsTxt = (b) => {
+  if (!b.sets.length) return "–";
+  const allSameKg = b.sets.every((s) => (s.kg || 0) === (b.sets[0].kg || 0));
+  const kg = b.sets[0].kg || 0;
+  if (allSameKg) return (kg ? "+" + nf(kg) + " kg × " : "") + b.sets.map((s) => s.reps ?? "–").join("·");
+  return b.sets.map((s) => (s.kg ? "+" + nf(s.kg) + "×" : "") + (s.reps ?? "–")).join(", ");
+};
+function lastBlock(ex, label, beforeId) {
+  const ws = sorted().reverse();
+  for (const w of ws) {
+    if (w.id === beforeId) continue;
+    const b = w.blocks.find((x) => x.ex === ex && x.label === label && x.sets.length);
+    if (b) return { w, b };
+  }
+  return null;
+}
+
+// ---------------- metrics ----------------
+const METRICS = {
+  vol: { name: "Volumen", unit: "Wdh.", desc: "Summe aller Wiederholungen" },
+  best: { name: "Bester Satz", unit: "Wdh.", desc: "Meiste Wiederholungen in einem Satz" },
+  topkg: { name: "Top-Gewicht", unit: "kg", desc: "Höchstes Zusatzgewicht mit mind. 1 Wdh." },
+  e1rm: { name: "e1RM", unit: "kg", desc: "Geschätztes 1RM-Zusatzgewicht (Epley, braucht Körpergewicht)" },
+};
+function metricOf(w, ex, label, m) {
+  const bs = w.blocks.filter((b) => b.ex === ex && (label === "*" || b.label === label));
+  const sets = bs.flatMap((b) => b.sets).filter((s) => (s.reps || 0) > 0);
+  if (!sets.length) return null;
+  if (m === "vol") return sum(sets.map((s) => s.reps));
+  if (m === "best") return Math.max(...sets.map((s) => s.reps));
+  if (m === "topkg") { const k = Math.max(...sets.map((s) => s.kg || 0)); return k > 0 ? k : null; }
+  if (m === "e1rm") {
+    const bw = w.bw || S.settings.bw; if (!bw) return null;
+    const v = Math.max(...sets.map((s) => (bw + (s.kg || 0)) * (1 + s.reps / 30) - bw));
+    return Math.round(v * 10) / 10;
+  }
+  return null;
+}
+function series(ex, label, m, sinceISO) {
+  return sorted().filter((w) => !sinceISO || w.date >= sinceISO)
+    .map((w) => ({ date: w.date, v: metricOf(w, ex, label, m), w })).filter((p) => p.v != null);
+}
+function trend(pts) {
+  const n = pts.length;
+  if (n < 2) return null;
+  const k = n >= 6 ? 3 : n >= 4 ? 2 : 1;
+  const a = pts.slice(-k), b = pts.slice(-2 * k, -k);
+  const ma = sum(a.map((p) => p.v)) / a.length, mb = sum(b.map((p) => p.v)) / b.length;
+  const pct = mb ? ((ma - mb) / mb) * 100 : 0;
+  const t0 = parseISO(pts[0].date).getTime();
+  const xs = pts.map((p) => (parseISO(p.date).getTime() - t0) / (7 * DAY)), ys = pts.map((p) => p.v);
+  const mx = sum(xs) / n, my = sum(ys) / n;
+  const den = sum(xs.map((x) => (x - mx) ** 2));
+  const slope = den ? sum(xs.map((x, i) => (x - mx) * (ys[i] - my))) / den : 0;
+  const verdict = pct >= 3 ? "up" : pct <= -3 ? "down" : "flat";
+  return { pct, slope, intercept: my - slope * mx, k, verdict, ma, mb };
+}
+function labelsFor(ex) {
+  const set = new Set();
+  S.workouts.forEach((w) => w.blocks.forEach((b) => { if (b.ex === ex && b.sets.length) set.add(b.label); }));
+  return Array.from(set);
+}
+function prsFor(ex) {
+  const out = [];
+  let bestBW = null, bestKg = null, bestE = null;
+  for (const w of S.workouts) for (const b of w.blocks) if (b.ex === ex) for (const s of b.sets) {
+    if (!(s.reps > 0)) continue;
+    if (!s.kg && (!bestBW || s.reps > bestBW.reps)) bestBW = { reps: s.reps, date: w.date, label: b.label };
+    if (s.kg > 0 && (!bestKg || s.kg > bestKg.kg || (s.kg === bestKg.kg && s.reps > bestKg.reps))) bestKg = { kg: s.kg, reps: s.reps, date: w.date };
+    const bw = w.bw || S.settings.bw;
+    if (bw) { const e = (bw + (s.kg || 0)) * (1 + s.reps / 30) - bw; if (!bestE || e > bestE.v) bestE = { v: e, date: w.date }; }
+  }
+  if (bestBW) out.push(["Meiste Wdh. ohne Gewicht", bestBW.reps + " Wdh.", bestBW.date]);
+  if (bestKg) out.push(["Schwerster Satz", "+" + nf(bestKg.kg) + " kg × " + bestKg.reps, bestKg.date]);
+  if (bestE) out.push(["Bestes e1RM (Zusatz)", nf(bestE.v) + " kg", bestE.date]);
+  return out;
+}
+function detectPRs(w) {
+  const others = S.workouts.filter((x) => x.id !== w.id);
+  const msgs = [];
+  for (const b of w.blocks) {
+    const sets = b.sets.filter((s) => s.reps > 0); if (!sets.length) continue;
+    const prev = others.flatMap((x) => x.blocks.filter((y) => y.ex === b.ex).flatMap((y) => y.sets.map((s) => ({ ...s, label: y.label }))));
+    if (!prev.length) continue;
+    const name = exById(b.ex).name;
+    const maxKg = Math.max(0, ...prev.map((s) => s.kg || 0));
+    const myKg = Math.max(...sets.map((s) => s.kg || 0));
+    if (myKg > maxKg) { msgs.push(name + ": neues Top-Gewicht +" + nf(myKg) + " kg"); continue; }
+    for (const s of sets) {
+      const same = prev.filter((p) => (p.kg || 0) === (s.kg || 0));
+      if (same.length && s.reps > Math.max(...same.map((p) => p.reps || 0))) { msgs.push(name + ": Rekord " + (s.kg ? "+" + nf(s.kg) + " kg × " : "") + s.reps + " Wdh."); break; }
+    }
+  }
+  return Array.from(new Set(msgs));
+}
+function weekStart(d) { const x = new Date(d); const wd = (x.getDay() + 6) % 7; x.setDate(x.getDate() - wd); return x; }
+
+// ---------------- UI state ----------------
+let tab = "home";
+let ui = { histOpen: null, delAsk: null, discardAsk: false, quick: {}, addEx: false, prog: { ex: "pu", label: null, m: "vol", range: "12" }, wipeAsk: false, busy: false, keyVisible: false, wpeak: {}, rsel: {}, pasteOpen: false, bdate: null, brange: "90", photoView: null, photoCmp: true, goalEdit: false, bdelAsk: null, phDelAsk: null, phBusy: false };
+
+const ICONS = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>',
+  train: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"/></svg>',
+  hist: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+  prog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16M5 15l4-4 3 3 6-7"/><path d="M14 7h4v4"/></svg>',
+  coach: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>',
+  body: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M8 9.5a5 5 0 0 1 8 0M12 9.5l1.5-2"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>',
+};
+const TABS = [["home", "Home"], ["train", "Training"], ["prog", "Fortschritt"], ["body", "Gewicht"], ["coach", "Coach"], ["more", "Mehr"]];
+
+function toast(msg, ms = 2800) {
+  const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), ms);
+}
+
+function render() {
+  const fid = document.activeElement && document.activeElement.id;
+  document.getElementById("tabs").innerHTML = TABS.map(([k, l]) => `<button data-tab="${k}" ${tab === k || (k === "train" && tab === "hist") ? 'aria-current="page"' : ""}>${ICONS[k]}<span>${l}</span></button>`).join("");
+  const app = document.getElementById("app");
+  app.innerHTML = ({ home: vHome, train: vTrain, hist: vHist, prog: vProg, body: vBody, coach: vCoach, more: vMore })[tab]();
+  if (tab === "body" && ui.focus) { const el = document.getElementById(ui.focus); ui.focus = null; if (el) { el.focus(); el.scrollIntoView && el.scrollIntoView({ block: "center" }); } }
+  if (tab === "body" && ui.photoView) fillFullPhotos();
+  if (tab === "train" && S.draft) { const n = document.getElementById("d-note"); if (n) n.value = S.draft.note || ""; }
+  if (tab === "coach") { const c = document.getElementById("chatend"); if (c && c.scrollIntoView) c.scrollIntoView({ block: "end" }); const ta = document.getElementById("c-in"); if (ta && ui.coachDraft) ta.value = ui.coachDraft; }
+  if (fid) { const el = document.getElementById(fid); if (el) el.focus({ preventScroll: true }); }
+}
+
+// ---------------- Apple Health via Kurzbefehl + Zwischenablage ----------------
+function parseHealth(txt) {
+  const out = {}, t = String(txt || ""), pairs = [];
+  const segs = t.split(/[|;\n]/);
+  if (segs.length > 1) segs.forEach((sg) => { const m = /(date|datum|steps|schritte|kg|gewicht|kcal)\s*[=:]\s*(.*)$/i.exec(sg.trim()); if (m) pairs.push([m[1], m[2]]); });
+  else { const re = /(date|datum|steps|schritte|kg|gewicht|kcal)\s*[=:]\s*([^\s|;]+)/gi; let m; while ((m = re.exec(t))) pairs.push([m[1], m[2]]); }
+  for (const [k0, v0] of pairs) {
+    const k = k0.toLowerCase(), v = v0.trim(); if (!v) continue;
+    if (k === "date" || k === "datum") {
+      let d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v) ? v : null;
+      const de = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(v); if (!d && de) d = de[3] + "-" + pad(+de[2]) + "-" + pad(+de[1]);
+      if (d && parseISO(d)) out.date = d;
+    } else if (k === "steps" || k === "schritte") {
+      const n = /^\d{1,3}([.,'’\s\u202f]\d{3})+$/.test(v) ? +v.replace(/[^\d]/g, "") : Math.round(num(v));
+      if (isFinite(n) && n >= 0 && n < 200000) out.steps = n;
+    } else if (k === "kg" || k === "gewicht") {
+      const n = num(v.replace(/[^\d,.]/g, "")); if (n && n > 30 && n < 250) out.kg = Math.round(n * 10) / 10;
+    } else if (k === "kcal") {
+      const n = /^\d{1,3}([.,]\d{3})+$/.test(v) ? +v.replace(/[^\d]/g, "") : Math.round(num(v));
+      if (isFinite(n) && n > 0 && n < 10000) out.kcal = n;
+    }
+  }
+  return out;
+}
+function applyHealth(txt) {
+  const h = parseHealth(txt);
+  if (h.steps == null && h.kg == null && h.kcal == null) { toast("In der Zwischenablage sind keine Health-Werte. Erst den Kurzbefehl „Cali Health“ ausführen.", 4500); return false; }
+  const date = h.date || iso(today());
+  const e = S.body.entries[date] = S.body.entries[date] || {};
+  const parts = [];
+  if (h.steps != null) { e.steps = h.steps; parts.push(nf(h.steps, 0) + " Schritte"); }
+  if (h.kg != null) { if (e.kg == null) { e.kg = h.kg; parts.push(nf(h.kg) + " kg"); } else if (e.kg !== h.kg) parts.push("Gewicht " + nf(e.kg) + " kg behalten"); }
+  if (h.kcal != null) { e.kcal = h.kcal; parts.push(h.kcal + " kcal"); }
+  ui.pasteOpen = false; save(true);
+  toast("Übernommen (" + fmtD(date) + "): " + parts.join(", "), 4000);
+  return true;
+}
+async function pasteHealth() {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error("no clipboard");
+    const txt = await navigator.clipboard.readText();
+    applyHealth(txt); render();
+  } catch (e) { ui.pasteOpen = true; render(); const el = document.getElementById("hp-text"); if (el) el.focus(); }
+}
+function pasteBox() {
+  return ui.pasteOpen ? `<div class="wbox"><label class="xs muted" for="hp-text">Lang auf das Feld drücken → Einsetzen, dann Übernehmen</label>
+    <textarea id="hp-text" placeholder="CALI date=… steps=… kg=…" style="min-height:52px"></textarea>
+    <div class="row"><button class="btn sm primary" data-act="health-apply">Übernehmen</button><button class="btn sm ghost" data-act="health-cancel">Abbrechen</button></div></div>` : "";
+}
+
+// ---------------- Home ----------------
+const QUOTES = [
+  "Die Waage misst heute. Deine Gewohnheiten entscheiden den Zieltag.",
+  "Du musst nicht perfekt sein. Du musst nur heute wieder anfangen.",
+  "Jeder Tag im Plan ist ein Tag, den dir keiner mehr nehmen kann.",
+  "Stagnation ist der Moment, in dem die meisten aufhören. Du nicht.",
+  "Hunger vergeht. Stolz bleibt.",
+  "Fünf Kilo sind nichts anderes als viele gute Tage hintereinander.",
+  "Disziplin heißt, sich daran zu erinnern, was du wirklich willst.",
+  "Ein schlechter Tag ruiniert nichts. Eine schlechte Woche fängt mit dem zweiten an. Steh heute auf.",
+  "Die Klimmzugstange merkt jedes Kilo, das du verlierst.",
+  "Motivation bringt dich zum Start. Routine bringt dich ins Ziel.",
+  "Abwiegen ist nicht spießig. Abwiegen ist ehrlich.",
+  "Vergleich dich nicht mit anderen. Vergleich dich mit dir von letzter Woche.",
+  "Niemand nimmt an einem Tag ab. Aber an jedem Tag entscheidet sich, ob du es tust.",
+  "Das Wasser auf der Waage schwankt. Der Trend nicht.",
+  "Eine Mahlzeit macht dich weder dick noch fit. Es ist die Summe.",
+  "Du trainierst nicht für den Spiegel von morgen, sondern für den in drei Monaten.",
+  "Schritte sind die leiseste Abkürzung zum Ziel.",
+  "Mach es heute so, dass du morgen nicht mit dir verhandeln musst.",
+  "Wer seine Ausreden kennt, kann sie überholen.",
+  "Gewohnheiten sind Zinsen. Sie wirken jeden Tag, ob du hinsiehst oder nicht.",
+  "Stärker werden und leichter werden ist dasselbe Projekt.",
+  "Heute zählt mehr als der perfekte Montag.",
+  "Ein Plan, den du durchziehst, schlägt jeden perfekten Plan, den du abbrichst.",
+  "Jedes Kilo weniger ist ein Kilo, das du nie wieder hochziehen musst.",
+  "Satt wirst du mit Eiweiß und Gemüse billiger als mit allem anderen.",
+  "Nicht die Challenge macht dich stolz, sondern wie du sie durchziehst.",
+  "Der Körper folgt dem, was du wiederholst.",
+  "Dein zukünftiges Ich sieht, was du heute isst.",
+  "Wenn es leicht wäre, wäre es keine Challenge.",
+  "Langsam ist auch schnell, solange du nicht stehen bleibst.",
+  "Fortschritt ist oft unsichtbar, bis er es plötzlich nicht mehr ist.",
+  "Ein Snack weniger ist kein Verzicht. Es ist eine Entscheidung.",
+  "Sei der, der am Zieltag sagt: Ich hab's durchgezogen.",
+  "Schlaf ist Training, das du im Liegen machst.",
+  "Sei neugierig auf deine Daten, nicht wütend auf sie.",
+  "Du brauchst keinen neuen Plan. Du brauchst den alten, nur konsequent.",
+  "Jede saubere Wiederholung zählt. Jede ehrliche Mahlzeit auch.",
+  "Der härteste Teil war anzufangen. Den hast du hinter dir.",
+  "Zieh dich hoch. An der Stange und im Kopf.",
+  "Kleine Schritte, jeden Tag. Das ist das ganze Geheimnis.",
+];
+const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+function weighStreak() {
+  const E = S.body.entries; let d = today(), n = 0;
+  if (!(E[iso(d)] && E[iso(d)].kg != null)) d = new Date(d.getTime() - DAY);
+  while (E[iso(d)] && E[iso(d)].kg != null) { n++; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1); }
+  return n;
+}
+const SC_ICONS = {
+  scale: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="M8 9.5a5 5 0 0 1 8 0M12 9.5l1.5-2"/></svg>',
+  bar: ICONS.train, cam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+  chart: ICONS.prog, list: ICONS.hist, chat: ICONS.coach,
+};
+function vHome() {
+  const name = (S.settings.name || "").trim();
+  const h = new Date().getHours();
+  const greet = h < 5 ? "Noch wach" : h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend";
+  const td = today(), tIso = iso(td);
+  const dayIdx = Math.round((td.getTime() - new Date(2026, 0, 1).getTime()) / DAY);
+  const qi = ((dayIdx % QUOTES.length) + QUOTES.length) % QUOTES.length;
+  const st = bodyStats(), g = S.body.goal, gT = parseISO(g.date);
+  const daysLeft = gT ? Math.round((gT.getTime() - td.getTime()) / DAY) : null;
+  const left = st.cur != null ? st.cur - g.kg : null;
+  const firstDates = Object.keys(S.body.entries).concat(S.workouts.filter((w) => !w.sample).map((w) => w.date)).sort();
+  const journey = firstDates.length ? Math.round((td.getTime() - parseISO(firstDates[0]).getTime()) / DAY) + 1 : 1;
+  const streak = weighStreak();
+  const eT = S.body.entries[tIso];
+  const wd = WD[td.getDay()];
+  const tpl = S.templates.find((t) => t.name.startsWith(wd + " ") || t.name.startsWith(wd + "·"));
+  const doneToday = S.workouts.find((w) => w.date === tIso);
+  const photos = Object.keys(thumbs).sort();
+  const lastPhoto = photos[photos.length - 1];
+  const photoDue = !lastPhoto || (td.getTime() - parseISO(lastPhoto).getTime()) / DAY >= 7;
+  const ok = '<span class="tick">✓</span>', open = '<span class="tick open"></span>';
+  return `<section class="hero">
+      <div class="label">${WD_LONG[td.getDay()]}, ${td.getDate()}. ${MONTHS[td.getMonth()]}</div>
+      <h1 class="hello">${greet}${name ? `,<br><span>${esc(name)}</span>` : ""}</h1>
+    </section>
+    <div class="card quote">
+      <span class="label">Tag ${journey} deiner Reise</span>
+      <p class="q">${esc(QUOTES[qi])}</p>
+    </div>
+    <div class="hud">
+      <div class="card kpi"><span class="label">Noch</span><span class="v">${left != null ? (left > 0 ? nf(left) : "0") : "–"}<small>kg</small></span><span class="s">bis ${nf(g.kg)} kg</span></div>
+      <div class="card kpi"><span class="label">Tage</span><span class="v">${daysLeft != null && daysLeft >= 0 ? daysLeft : "–"}</span><span class="s">bis ${fmtShort(g.date)}</span></div>
+      <div class="card kpi"><span class="label">Serie</span><span class="v">${streak}<small>${streak === 1 ? "Tag" : "Tage"}</small></span>
+        <span class="segs">${Array.from({ length: 7 }, (_, k) => `<i class="${k < Math.min(streak, 7) ? "on" + (streak >= 7 ? " ok" : "") : ""}"></i>`).join("")}</span></div>
+    </div>
+    <div class="card">
+      <h2>Heute</h2>
+      <div class="todo">${eT && eT.kg != null ? ok : open}<div><b>Wiegen</b><span class="small muted">${eT && eT.kg != null ? nf(eT.kg) + " kg eingetragen" : "Morgens, nach dem Klo, vor dem Frühstück"}</span></div>
+        ${eT && eT.kg != null ? "" : `<button class="btn sm primary" data-act="go-weigh">Eintragen</button>`}</div>
+      <div class="todo">${doneToday ? ok : open}<div><b>${doneToday ? esc(doneToday.name || "Training") : tpl ? esc(tpl.name) : "Ruhetag"}</b><span class="small muted">${doneToday ? sum(doneToday.blocks.map(blockReps)) + " Wdh. erledigt" : tpl ? "Heute steht Training an" : "Erholung, Schritte sammeln"}</span></div>
+        ${doneToday ? "" : tpl ? `<button class="btn sm primary" data-act="start" data-tpl="${tpl.id}">Starten</button>` : ""}</div>
+      <div class="todo">${eT && eT.kcal != null ? ok : open}<div><b>Kalorien</b><span class="small muted">${eT && eT.kcal != null ? eT.kcal + " kcal eingetragen" : "Abgewogen eintragen, auch Öl und Getränke"}</span></div>
+        ${eT && eT.kcal != null ? "" : `<button class="btn sm" data-act="go-weigh" data-f="kcal">Eintragen</button>`}</div>
+      <div class="todo">${eT && eT.steps != null ? ok : open}<div><b>Schritte</b><span class="small muted">${eT && eT.steps != null ? nf(eT.steps, 0) + " Schritte" : "Kurzbefehl „Cali Health“, dann einfügen"}</span></div>
+        ${eT && eT.steps != null ? "" : `<button class="btn sm" data-act="health-paste">Aus Health</button>`}</div>
+      ${pasteBox()}
+      ${photoDue ? `<div class="todo">${open}<div><b>Wochenfoto</b><span class="small muted">${lastPhoto ? "Letztes am " + fmtShort(lastPhoto) : "Noch kein Foto"}</span></div><label class="btn sm" for="h-photo" style="display:inline-flex;align-items:center">Foto</label></div>` : ""}
+      <input type="file" id="h-photo" accept="image/*" hidden>
+    </div>
+    <div class="shortcuts">
+      <button class="sc" data-act="go-weigh"><span class="ic">${SC_ICONS.scale}</span><b>Gewicht</b><span>eintragen</span></button>
+      <button class="sc" data-act="start" data-tpl="${tpl ? tpl.id : ""}"><span class="ic">${SC_ICONS.bar}</span><b>Training</b><span>${tpl ? esc(tpl.name) : "frei starten"}</span></button>
+      <label class="sc" for="h-photo"><span class="ic">${SC_ICONS.cam}</span><b>Foto</b><span>aufnehmen</span></label>
+      <button class="sc" data-tab="prog"><span class="ic">${SC_ICONS.chart}</span><b>Fortschritt</b><span>Diagramme</span></button>
+      <button class="sc" data-tab="hist"><span class="ic">${SC_ICONS.list}</span><b>Verlauf</b><span>alle Einheiten</span></button>
+      <button class="sc" data-tab="coach"><span class="ic">${SC_ICONS.chat}</span><b>Coach</b><span>fragen</span></button>
+    </div>`;
+}
+
+// ---------------- Training view ----------------
+function vTrain() {
+  if (!S.draft) {
+    const last = sorted().slice(-1)[0];
+    const lastOf = (tpl) => { const w = sorted().reverse().find((x) => x.tpl === tpl.id); return w ? "zuletzt " + fmtD(w.date) : "noch nie"; };
+    const thisWeek = S.workouts.filter((w) => parseISO(w.date) >= weekStart(today())).length;
+    const bst = bodyStats();
+    const t0 = today().getTime(), r7 = (from, to) => sum(S.workouts.filter((w) => { const t = parseISO(w.date).getTime(); return t > from && t <= to; }).map((w) => sum(w.blocks.map(blockReps))));
+    const v7 = r7(t0 - 7 * DAY, t0), vPrev = r7(t0 - 14 * DAY, t0 - 7 * DAY);
+    const vPct = vPrev ? Math.round(((v7 - vPrev) / vPrev) * 100) : null;
+    const target = Math.max(1, S.templates.length);
+    const bwk = bst.reg ? bst.reg.b * 7 : null;
+    return `<header class="bar"><h1>Training</h1><span class="xs muted">${fmtD(iso(today()))}</span></header>
+      <div class="hud">
+        <div class="card kpi"><span class="label">Woche</span><span class="v">${thisWeek}<small>/${target}</small></span>
+          <span class="segs">${Array.from({ length: target }, (_, k) => `<i class="${k < thisWeek ? "on" + (thisWeek >= target ? " ok" : "") : ""}"></i>`).join("")}</span></div>
+        <div class="card kpi"><span class="label">Gewicht</span><span class="v">${bst.cur != null ? nf(bst.cur) : "–"}<small>kg</small></span>
+          <span class="s ${bwk == null ? "" : bwk < -0.1 ? "up" : bwk > 0.1 ? "down" : "flat"}">${bwk != null ? (bwk >= 0 ? "+" : "") + nf(bwk, 2) + " /Wo" : "Trend folgt"}</span></div>
+        <div class="card kpi"><span class="label">Volumen 7T</span><span class="v">${v7}<small>Wdh</small></span>
+          <span class="s ${vPct == null ? "" : vPct > 0 ? "up" : vPct < 0 ? "down" : "flat"}">${vPct != null ? (vPct >= 0 ? "+" : "") + vPct + " % ggü. Vorwoche" : "Vorwoche leer"}</span></div>
+      </div>
+      <div class="card"><div class="field"><label class="label" for="new-date">Datum</label><input type="date" id="new-date" value="${iso(today())}"></div></div>
+      <div class="tpls">
+        ${S.templates.map((t) => `<button class="tpl" data-act="start" data-tpl="${t.id}"><b>${esc(t.name)}</b><span class="small muted">${esc(t.note || t.blocks.map((b) => exById(b.ex).name + (b.label ? " " + b.label : "")).join(", "))}</span><span class="xs muted">${lastOf(t)}</span></button>`).join("")}
+        <button class="tpl free" data-act="start" data-tpl=""><b>Freies Training</b><span class="small muted">Übungen selbst wählen</span></button>
+      </div>
+      ${last ? `<div class="card"><div class="between"><h2>Letzte Einheit · ${fmtD(last.date)}</h2><button class="btn ghost sm" data-tab="hist">Verlauf ›</button></div>${histBody(last)}</div>`
+        : `<div class="card empty"><h2>Noch keine Einträge</h2><p class="small muted">Wähl oben eine Vorlage und trag deine Sätze ein. Zum Ausprobieren der Diagramme kannst du Beispieldaten laden und später wieder löschen.</p><button class="btn" data-act="sample">Beispieldaten laden</button></div>`}`;
+  }
+  const d = S.draft;
+  return `<header class="bar"><h1>${d.editing ? "Bearbeiten" : "Läuft"}</h1>
+      ${ui.discardAsk ? `<span class="row"><button class="btn danger sm" data-act="discard-yes">Verwerfen</button><button class="btn sm" data-act="discard-no">Zurück</button></span>`
+        : `<button class="btn ghost sm" data-act="discard">${d.editing ? "Abbrechen" : "Verwerfen"}</button>`}</header>
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label class="label" for="d-name">Einheit</label><input type="text" id="d-name" data-d="name" value="${esc(d.name)}"></div>
+        <div class="field"><label class="label" for="d-date">Datum</label><input type="date" id="d-date" data-d="date" value="${esc(d.date)}"></div>
+      </div>
+      <div class="small muted">Gesamt <b class="num" id="d-total">${sum(d.blocks.map(blockReps))}</b> Wdh. · ${d.blocks.reduce((a, b) => a + b.sets.length, 0)} Sätze</div>
+    </div>
+    ${d.blocks.map((b, i) => blockCard(b, i, d)).join("")}
+    ${ui.addEx ? `<div class="card"><h3>Übung hinzufügen</h3>
+        <div class="grid2"><div class="field"><label class="label" for="ax-ex">Übung</label><select id="ax-ex">${S.exercises.map((e) => `<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></div>
+        <div class="field"><label class="label" for="ax-label">Variante</label><input type="text" id="ax-label" placeholder="z. B. Gewichtet, EMOM, W4"></div></div>
+        <div class="row"><button class="btn primary sm" data-act="addex-ok">Hinzufügen</button><button class="btn sm" data-act="addex-no">Abbrechen</button></div></div>`
+      : `<button class="btn block" data-act="addex">+ Übung</button>`}
+    <div class="card">
+      <div class="grid2">
+        <div class="field"><label class="label" for="d-bw">Körpergewicht (kg)</label><input type="text" inputmode="decimal" id="d-bw" data-d="bw" value="${d.bw != null ? kgTxt(d.bw) : ""}" placeholder="${S.settings.bw != null ? kgTxt(S.settings.bw) : "optional"}"></div>
+        <div class="field"><label class="label" for="d-rpe">Gefühl 1–10</label><input type="number" inputmode="numeric" id="d-rpe" data-d="rpe" min="1" max="10" value="${d.rpe ?? ""}" placeholder="optional"></div>
+      </div>
+      <div class="field"><label class="label" for="d-note">Notiz</label><textarea id="d-note" data-d="note" placeholder="Schlaf, Technik, Beschwerden …"></textarea></div>
+    </div>
+    <button class="btn primary block" data-act="finish" style="min-height:50px;font-size:1.05rem">Training speichern</button>
+    <button class="btn ghost block small" data-act="savetpl">Aufbau als Vorlage speichern</button>`;
+}
+
+function blockCard(b, i, d) {
+  const ex = exById(b.ex);
+  const lb = lastBlock(b.ex, b.label, d.editing);
+  const l0 = lb && lb.b.sets[0];
+  const q = ui.quick[i] || { n: b.n || 3, reps: l0 ? l0.reps : "", kg: l0 ? l0.kg || 0 : b.kgDefault || 0 };
+  return `<div class="card block" style="--bc:${ex.color}">
+    <div class="between">
+      <div class="row" style="gap:8px"><span class="sw" style="background:${ex.color}"></span><h2>${esc(ex.name)}</h2>
+        <input type="text" aria-label="Variante" id="bl-${i}" data-b="${i}" data-f="label" value="${esc(b.label)}" placeholder="Variante" style="width:120px;padding:4px 8px;font-size:.85rem"></div>
+      <button class="icon-btn" data-act="rmblock" data-b="${i}" aria-label="Übung entfernen">×</button>
+    </div>
+    ${lb ? `<div class="last">Letztes Mal (${fmtD(lb.w.date)}): <span class="mono">${esc(setsTxt(lb.b))}</span> = ${blockReps(lb.b)} Wdh.</div>` : ""}
+    ${isRounds(b.label) ? roundsBody(b, i, lb) : `<div class="sets">
+      ${b.sets.map((s, j) => `<div class="set"><span class="n">${j + 1}</span>
+        <label class="in"><input type="number" inputmode="numeric" id="s-${i}-${j}-r" data-b="${i}" data-s="${j}" data-f="reps" value="${s.reps ?? ""}" aria-label="Satz ${j + 1} Wiederholungen"><span>Wdh</span></label>
+        <label class="in"><input type="text" inputmode="decimal" id="s-${i}-${j}-k" data-b="${i}" data-s="${j}" data-f="kg" value="${s.kg ? kgTxt(s.kg) : ""}" placeholder="0" aria-label="Satz ${j + 1} Zusatzgewicht"><span>kg</span></label>
+        <button class="icon-btn" data-act="rmset" data-b="${i}" data-s="${j}" aria-label="Satz löschen">−</button></div>`).join("")}
+    </div>
+    <div class="between"><button class="btn sm" data-act="addset" data-b="${i}">+ Satz</button><span class="small">Σ <b class="num" id="sum-${i}">${blockReps(b)}</b> Wdh.</span></div>
+    <div class="quick">
+      <div class="field"><label class="xs muted" for="q-${i}-n">Sätze/Runden</label><input type="number" inputmode="numeric" id="q-${i}-n" data-q="${i}" data-f="n" value="${q.n}"></div>
+      <div class="field"><label class="xs muted" for="q-${i}-r">Wdh.</label><input type="number" inputmode="numeric" id="q-${i}-r" data-q="${i}" data-f="reps" value="${q.reps ?? ""}"></div>
+      <div class="field"><label class="xs muted" for="q-${i}-k">kg</label><input type="text" inputmode="decimal" id="q-${i}-k" data-q="${i}" data-f="kg" value="${q.kg ? kgTxt(q.kg) : ""}" placeholder="0"></div>
+      <button class="btn sm" data-act="quick" data-b="${i}">Serie eintragen</button>
+    </div>
+    ${isW(b.label) ? wRow(b, i, lb, q) : ""}`}
+  </div>`;
+}
+function roundInfo(b, lb) {
+  const n = b.sets.length || b.n || 10;
+  const last = lb ? lb.b.sets.map((s) => s.reps || 0) : null;
+  const lastFit = last ? fitLen(last, n) : null;
+  return { n, last, lastFit, sug: lastFit ? progressRounds(lastFit) : null, kg: lb && lb.b.sets[0] ? lb.b.sets[0].kg || 0 : b.kgDefault || 0 };
+}
+function roundsBody(b, i, lb) {
+  const R = roundInfo(b, lb), has = b.sets.length > 0;
+  const vals = has ? b.sets.map((s) => s.reps ?? 0) : R.sug || [];
+  const sel = Math.min(ui.rsel[i] ?? vals.length - 1, vals.length - 1);
+  const cells = vals.map((v, k) => {
+    const ref = R.last ? R.last[k] : undefined;
+    const cmp = has && ref != null ? (v > ref ? " up" : v < ref ? " dn" : "") : "";
+    return `<button class="rc${has ? "" : " ghost"}${has && sel === k ? " on" : ""}${cmp}" data-act="r-sel" data-b="${i}" data-k="${k}" aria-label="Runde ${k + 1}: ${v} Wiederholungen"><span>R${k + 1}</span><b>${v}</b></button>`;
+  }).join("");
+  let ctrl;
+  if (has) {
+    const tot = sum(vals), lt = R.last ? sum(R.last) : null;
+    ctrl = `<div class="rstep"><span class="small">Runde <b>${sel + 1}</b></span>
+        <button class="btn" data-act="r-step" data-b="${i}" data-d="-1" aria-label="Runde ${sel + 1} minus 1">−</button>
+        <b class="num rv">${vals[sel]}</b>
+        <button class="btn" data-act="r-step" data-b="${i}" data-d="1" aria-label="Runde ${sel + 1} plus 1">+</button></div>
+      <div class="row"><button class="btn sm" data-act="r-all" data-b="${i}" data-d="-1">Alle −1</button><button class="btn sm" data-act="r-all" data-b="${i}" data-d="1">Alle +1</button>
+        <button class="btn sm" data-act="r-rounds" data-b="${i}" data-d="1">+ Runde</button><button class="btn sm" data-act="r-rounds" data-b="${i}" data-d="-1">− Runde</button></div>
+      <div class="small">Σ <b class="num" id="sum-${i}">${tot}</b> Wdh. in ${vals.length} Runden${lt != null ? ` · letztes Mal ${lt} <b class="${tot > lt ? "up" : tot < lt ? "down" : "flat"}">(${tot - lt >= 0 ? "+" : ""}${tot - lt})</b>` : ""}</div>`;
+  } else if (R.sug) {
+    ctrl = `<div class="small">Vorschlag: letztes Mal +1 Wdh. = <b class="num">${sum(R.sug)}</b> Wdh.</div>
+      <div class="row"><button class="btn sm primary" data-act="r-take" data-b="${i}" data-mode="sug">Vorschlag übernehmen</button><button class="btn sm" data-act="r-take" data-b="${i}" data-mode="last">Wie letztes Mal</button></div>
+      <p class="xs muted">Danach eine Runde antippen und mit − / + anpassen, falls du sie nicht ganz geschafft hast.</p>`;
+  } else {
+    ctrl = `<div class="quick" style="grid-template-columns:repeat(2,minmax(0,1fr)) auto">
+        <div class="field"><label class="xs muted" for="r-${i}-n">Runden</label><input type="number" inputmode="numeric" id="r-${i}-n" value="${R.n}"></div>
+        <div class="field"><label class="xs muted" for="r-${i}-r">Wdh. pro Runde</label><input type="number" inputmode="numeric" id="r-${i}-r" placeholder="z. B. 7"></div>
+        <button class="btn sm primary" data-act="r-fill" data-b="${i}">Runden füllen</button></div>`;
+  }
+  return `<div class="rgrid">${cells}</div>${ctrl}`;
+}
+function wRow(b, i, lb, q) {
+  const lastPeak = lb ? Math.max(...lb.b.sets.map((s) => s.reps || 0)) : null;
+  const peak = ui.wpeak[i] ?? lastPeak ?? b.peak ?? 4;
+  const seq = wPyramid(peak);
+  return `<div class="wbox">
+    <div class="quick" style="grid-template-columns:repeat(2,minmax(0,1fr)) auto">
+      <div class="field"><label class="xs muted" for="w-${i}-p">W-Spitze</label><input type="number" inputmode="numeric" id="w-${i}-p" data-w="${i}" min="1" max="20" value="${peak}"></div>
+      <div class="field"><label class="xs muted" for="w-${i}-k">kg</label><input type="text" inputmode="decimal" id="w-${i}-k" value="${q.kg ? kgTxt(q.kg) : ""}" placeholder="0"></div>
+      <button class="btn sm primary" data-act="wfill" data-b="${i}">W eintragen</button>
+    </div>
+    <div class="xs muted" id="w-${i}-prev"><span class="mono">${seq.join("-")}</span> = ${seq.length} Sätze, ${sum(seq)} Wdh.${lastPeak ? ` · letztes Mal Spitze ${lastPeak}` : ""}</div>
+  </div>`;
+}
+
+// ---------------- History view ----------------
+function histBody(w) {
+  return `<div class="hist-item">${w.blocks.filter((b) => b.sets.length).map((b) => {
+    const ex = exById(b.ex);
+    return `<div class="hist-line"><span class="sw" style="background:${ex.color}"></span><b>${esc(ex.name)}</b>${b.label ? `<span class="chip">${esc(b.label)}</span>` : ""}<span class="mono">${esc(setsTxt(b))}</span><span class="muted small">= ${blockReps(b)}</span></div>`;
+  }).join("") || '<span class="small muted">Keine Sätze</span>'}
+  ${w.note ? `<p class="small muted">„${esc(w.note)}“</p>` : ""}
+  ${w.bw || w.rpe ? `<p class="xs muted">${w.bw ? "KG " + nf(w.bw) + " kg" : ""}${w.bw && w.rpe ? " · " : ""}${w.rpe ? "Gefühl " + w.rpe + "/10" : ""}</p>` : ""}</div>`;
+}
+function vHist() {
+  const ws = sorted().reverse();
+  if (!ws.length) return `<header class="bar"><h1>Verlauf</h1><button class="btn ghost sm" data-tab="train">‹ Training</button></header><div class="card empty"><h2>Noch nichts eingetragen</h2><p class="small muted">Gespeicherte Trainings erscheinen hier, neueste zuerst.</p></div>`;
+  let lastWeek = null, html = "";
+  for (const w of ws) {
+    const wk = iso(weekStart(parseISO(w.date)));
+    if (wk !== lastWeek) {
+      const n = ws.filter((x) => iso(weekStart(parseISO(x.date))) === wk).length;
+      html += `<div class="label" style="margin-top:6px">Woche ab ${fmtShort(wk)} · ${n} Einheit${n === 1 ? "" : "en"}</div>`; lastWeek = wk;
+    }
+    const open = ui.histOpen === w.id;
+    html += `<div class="card">
+      <button class="between" data-act="hopen" data-id="${w.id}" style="border:0;background:transparent;padding:0;text-align:left;width:100%">
+        <span><b>${esc(w.name || "Training")}</b> ${w.sample ? '<span class="chip warn">Beispiel</span>' : ""}<br><span class="small muted">${fmtD(w.date)} · ${sum(w.blocks.map(blockReps))} Wdh.</span></span><span class="muted">${open ? "▲" : "▼"}</span></button>
+      ${open ? histBody(w) + `<div class="row">${ui.delAsk === w.id
+        ? `<span class="small">Wirklich löschen?</span><button class="btn danger sm" data-act="del-yes" data-id="${w.id}">Löschen</button><button class="btn sm" data-act="del-no">Nein</button>`
+        : `<button class="btn sm" data-act="edit" data-id="${w.id}">Bearbeiten</button><button class="btn sm" data-act="dup" data-id="${w.id}">Als neues Training wiederholen</button><button class="btn danger sm" data-act="del" data-id="${w.id}">Löschen</button>`}</div>` : ""}
+    </div>`;
+  }
+  return `<header class="bar"><h1>Verlauf</h1><button class="btn ghost sm" data-tab="train">‹ Training</button></header><p class="xs muted">${ws.length} Einheiten</p>${html}`;
+}
+
+// ---------------- Progress view ----------------
+function vProg() {
+  if (!S.workouts.length) return `<header class="bar"><h1>Fortschritt</h1></header><div class="card empty"><h2>Noch keine Daten</h2><p class="small muted">Nach zwei Einheiten mit derselben Übung siehst du hier, ob du dich steigerst.</p><button class="btn" data-act="sample">Beispieldaten laden</button></div>`;
+  const p = ui.prog;
+  const labels = labelsFor(p.ex);
+  if (p.label == null || (p.label !== "*" && !labels.includes(p.label))) {
+    const cnt = {}; S.workouts.forEach((w) => w.blocks.forEach((b) => { if (b.ex === p.ex && b.sets.length) cnt[b.label] = (cnt[b.label] || 0) + 1; }));
+    p.label = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x])[0] ?? "*";
+  }
+  const since = p.range === "all" ? null : iso(new Date(today().getTime() - (+p.range) * 7 * DAY));
+  const hasBW = !!S.settings.bw || S.workouts.some((w) => w.bw);
+  if (p.m === "e1rm" && !hasBW) p.m = "vol";
+  const pts = series(p.ex, p.label, p.m, since);
+  const tr = trend(pts);
+  const M = METRICS[p.m];
+  const ex = exById(p.ex);
+  let verdict = `<p class="small muted">${pts.length ? "Noch zu wenig Einheiten für einen Trend." : "Keine Daten für diese Auswahl."}</p>`;
+  if (tr) {
+    const word = tr.verdict === "up" ? "Steigerung" : tr.verdict === "down" ? "Rückgang" : "Stagnation";
+    const cmp = tr.k === 1 ? "letzte vs. vorletzte Einheit" : `Ø letzte ${tr.k} vs. ${tr.k} davor`;
+    verdict = `<div class="verdict"><div class="big ${tr.verdict}">${tr.pct >= 0 ? "+" : ""}${nf(tr.pct)} %</div>
+      <div><b class="${tr.verdict}">${word}</b><div class="small muted">${cmp}: ${nf(tr.ma)} vs. ${nf(tr.mb)} ${M.unit}</div><div class="small muted">Trendlinie: ${tr.slope >= 0 ? "+" : ""}${nf(tr.slope, 2)} ${M.unit} pro Woche</div></div></div>`;
+  }
+  const prs = prsFor(p.ex);
+  return `<header class="bar"><h1>Fortschritt</h1></header>
+    <div class="card">
+      <div class="seg" role="group" aria-label="Übung">${S.exercises.map((e) => `<button data-act="p-ex" data-v="${e.id}" aria-pressed="${p.ex === e.id}">${esc(e.name)}</button>`).join("")}</div>
+      <div class="grid2">
+        <div class="field"><label class="label" for="p-label">Variante</label><select id="p-label" data-p="label"><option value="*"${p.label === "*" ? " selected" : ""}>Alle (gemischt)</option>${labels.map((l) => `<option value="${esc(l)}"${p.label === l ? " selected" : ""}>${esc(l || "ohne Name")}</option>`).join("")}</select></div>
+        <div class="field"><label class="label" for="p-m">Kennzahl</label><select id="p-m" data-p="m">${Object.entries(METRICS).map(([k, v]) => `<option value="${k}"${p.m === k ? " selected" : ""}${k === "e1rm" && !hasBW ? " disabled" : ""}>${v.name}${k === "e1rm" && !hasBW ? " (Körpergewicht fehlt)" : ""}</option>`).join("")}</select></div>
+      </div>
+      <div class="seg" role="group" aria-label="Zeitraum">${[["4", "4 Wo."], ["12", "12 Wo."], ["26", "6 Mon."], ["all", "Alles"]].map(([k, l]) => `<button data-act="p-range" data-v="${k}" aria-pressed="${p.range === k}">${l}</button>`).join("")}</div>
+    </div>
+    <div class="card">
+      <div class="between"><h2><span class="sw" style="background:${ex.color}"></span> ${esc(ex.name)} · ${M.name}</h2><span class="xs muted">${esc(M.desc)}</span></div>
+      ${verdict}
+      <div class="chart">${chartSVG(pts, tr, ex.color, M.unit)}</div>
+      ${pts.length ? `<table class="tbl"><thead><tr><th>Datum</th><th>Einheit</th><th class="r">${M.name}</th></tr></thead><tbody>
+        ${pts.slice(-6).reverse().map((q) => `<tr><td>${fmtD(q.date)}</td><td class="muted">${esc(q.w.name || "")}</td><td class="r num"><b>${nf(q.v)}</b> ${M.unit}</td></tr>`).join("")}</tbody></table>` : ""}
+    </div>
+    <div class="card"><h2>Rekorde ${esc(ex.name)}</h2>
+      <div class="prs">${prs.length ? prs.map(([k, v, d]) => `<div class="pr"><span class="muted">${k}</span><span><b class="num">${v}</b> <span class="xs muted">${fmtShort(d)}</span></span></div>`).join("") : '<span class="small muted">Noch keine</span>'}</div></div>
+    <div class="card"><div class="between"><h2>Wochenvolumen</h2><span class="xs muted">Wdh. aller Übungen · Einheiten pro Woche</span></div>${weekChart()}</div>`;
+}
+
+function chartSVG(pts, tr, color, unit) {
+  if (!pts.length) return "";
+  const W = 340, H = 190, L = 34, R = 10, T = 12, B = 26;
+  const ts = pts.map((p) => parseISO(p.date).getTime());
+  let t0 = Math.min(...ts), t1 = Math.max(...ts);
+  if (t1 === t0) { t0 -= 3 * DAY; t1 += 3 * DAY; }
+  const vs = pts.map((p) => p.v);
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  if (tr) { [t0, t1].forEach((t) => { const y = tr.intercept + tr.slope * ((t - ts[0]) / (7 * DAY)); lo = Math.min(lo, y); hi = Math.max(hi, y); }); }
+  const span = hi - lo || Math.max(1, hi * 0.2);
+  lo = Math.max(0, lo - span * 0.15); hi = hi + span * 0.15;
+  const step = niceStep((hi - lo) / 4);
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  const x = (t) => L + ((t - t0) / (t1 - t0)) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  let g = "";
+  for (let v = lo; v <= hi + 1e-9; v += step) {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line)" stroke-width="1"/>`;
+    g += `<text x="${L - 5}" y="${y(v) + 3.5}" text-anchor="end" font-size="10" style="fill:var(--muted)">${nf(v)}</text>`;
+  }
+  const xl = [pts[0], pts[Math.floor((pts.length - 1) / 2)], pts[pts.length - 1]].filter((p, i, a) => a.indexOf(p) === i);
+  xl.forEach((p, i) => { const anchor = xl.length > 1 && i === 0 ? "start" : i === xl.length - 1 && xl.length > 1 ? "end" : "middle";
+    g += `<text x="${x(parseISO(p.date).getTime())}" y="${H - 8}" text-anchor="${anchor}" font-size="10" style="fill:var(--muted)">${fmtShort(p.date)}</text>`; });
+  const area = `M${x(ts[0])},${y(lo)} ` + pts.map((p, i) => `L${x(ts[i])},${y(p.v)}`).join(" ") + ` L${x(ts[ts.length - 1])},${y(lo)} Z`;
+  const gid = "g" + Math.random().toString(36).slice(2, 8);
+  g += `<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:${color};stop-opacity:.38"/><stop offset="1" style="stop-color:${color};stop-opacity:0"/></linearGradient></defs>`;
+  g += `<path d="${area}" fill="url(#${gid})"/>`;
+  g += `<polyline points="${pts.map((p, i) => x(ts[i]) + "," + y(p.v)).join(" ")}" fill="none" style="stroke:${color};filter:drop-shadow(0 0 5px ${color})" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if (tr && pts.length >= 3) {
+    const ya = tr.intercept, yb = tr.intercept + tr.slope * ((ts[ts.length - 1] - ts[0]) / (7 * DAY));
+    g += `<line x1="${x(ts[0])}" y1="${y(ya)}" x2="${x(ts[ts.length - 1])}" y2="${y(yb)}" style="stroke:var(--ink);opacity:.55" stroke-width="1.4" stroke-dasharray="4 4"/>`;
+  }
+  pts.forEach((p, i) => { const last = i === pts.length - 1;
+    g += `<circle cx="${x(ts[i])}" cy="${y(p.v)}" r="${last ? 4.5 : 2.8}" style="fill:${last ? "#fff" : "var(--bg)"};stroke:${color}" stroke-width="1.8"><title>${fmtD(p.date)}: ${nf(p.v)} ${unit}</title></circle>`; });
+  const lp = pts[pts.length - 1];
+  g += `<text x="${Math.min(x(ts[ts.length - 1]), W - R)}" y="${Math.max(T + 8, y(lp.v) - 9)}" text-anchor="end" font-size="11" font-weight="700" style="fill:${color}">${nf(lp.v)}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Verlauf">${g}</svg><div class="xs muted">Gestrichelt: Trendlinie über den Zeitraum</div>`;
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw || 1))); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+
+function weekChart() {
+  const weeks = [];
+  const ws0 = weekStart(today());
+  for (let i = 7; i >= 0; i--) { const s = new Date(ws0); s.setDate(s.getDate() - i * 7); weeks.push(s); }
+  const data = weeks.map((s) => {
+    const e = new Date(s); e.setDate(e.getDate() + 7);
+    const wk = S.workouts.filter((w) => { const d = parseISO(w.date); return d >= s && d < e; });
+    const per = {}; S.exercises.forEach((x) => (per[x.id] = 0));
+    wk.forEach((w) => w.blocks.forEach((b) => { per[b.ex] = (per[b.ex] || 0) + blockReps(b); }));
+    return { s, per, n: wk.length, tot: sum(Object.values(per)) };
+  });
+  const max = Math.max(10, ...data.map((d) => d.tot));
+  const W = 340, H = 150, L = 6, R = 6, T = 14, B = 30;
+  const bw = (W - L - R) / data.length;
+  let g = "";
+  data.forEach((d, i) => {
+    let yy = H - B; const x0 = L + i * bw + bw * 0.18, w = bw * 0.64;
+    S.exercises.forEach((e) => { const v = d.per[e.id] || 0; if (!v) return; const h = (v / max) * (H - T - B); yy -= h;
+      g += `<rect x="${x0}" y="${yy}" width="${w}" height="${Math.max(0, h - 1)}" rx="2" style="fill:${e.color};filter:drop-shadow(0 0 4px ${e.color})"><title>${e.name}: ${v}</title></rect>`; });
+    if (d.tot) g += `<text x="${x0 + w / 2}" y="${yy - 3}" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">${d.tot}</text>`;
+    g += `<text x="${x0 + w / 2}" y="${H - 16}" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">${fmtShort(iso(d.s))}</text>`;
+    g += `<text x="${x0 + w / 2}" y="${H - 4}" text-anchor="middle" font-size="9.5" font-weight="700" style="fill:${d.n >= 3 ? "var(--ok)" : d.n ? "var(--warn)" : "var(--muted)"}">${d.n}×</text>`;
+  });
+  g += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" style="stroke:var(--line)"/>`;
+  const legend = S.exercises.map((e) => `<span class="row xs" style="gap:4px"><span class="sw" style="background:${e.color}"></span>${esc(e.name)}</span>`).join("");
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Wochenvolumen">${g}</svg></div><div class="row" style="gap:12px">${legend}</div>`;
+}
+
+// ---------------- Coach ----------------
+function buildContext() {
+  const bw = S.settings.bw;
+  const tpls = S.templates.map((t) => `- ${t.name}${t.note ? " (" + t.note + ")" : ""}: ` + t.blocks.map((b) => exById(b.ex).name + (b.label ? " [" + b.label + "]" : "") + (b.kg ? " +" + b.kg + " kg" : "") + (b.n ? ", " + b.n + " Sätze/Runden" : "")).join("; ")).join("\n");
+  const since = iso(new Date(today().getTime() - 16 * 7 * DAY));
+  const ws = sorted().filter((w) => w.date >= since);
+  const log = ws.map((w) => `${w.date} ${w.name || ""}${w.sample ? " (Beispieldaten)" : ""}${w.bw ? " KG " + w.bw : ""}${w.rpe ? " Gefühl " + w.rpe + "/10" : ""}: ` +
+    w.blocks.filter((b) => b.sets.length).map((b) => exById(b.ex).name + (b.label ? " [" + b.label + "]" : "") + " " + setsTxt(b) + " (Σ" + blockReps(b) + ")").join(" | ") + (w.note ? " — Notiz: " + w.note : "")).join("\n");
+  const trends = [];
+  for (const e of S.exercises) for (const l of labelsFor(e.id)) for (const m of ["vol", "best", "topkg"]) {
+    const t = trend(series(e.id, l, m, iso(new Date(today().getTime() - 12 * 7 * DAY))));
+    if (t) trends.push(`${e.name} [${l}] ${METRICS[m].name}: ${t.pct >= 0 ? "+" : ""}${t.pct.toFixed(1)} % (${t.ma.toFixed(1)} vs ${t.mb.toFixed(1)}), Trend ${t.slope.toFixed(2)}/Woche`);
+  }
+  const weeks = []; const w0 = weekStart(today());
+  for (let i = 7; i >= 0; i--) { const s = new Date(w0); s.setDate(s.getDate() - i * 7); const e = new Date(s); e.setDate(e.getDate() + 7);
+    weeks.push(iso(s) + ": " + S.workouts.filter((w) => { const d = parseISO(w.date); return d >= s && d < e; }).length + " Einheiten"); }
+  return `Heute: ${iso(today())}. Körpergewicht: ${bw ? bw + " kg" : "unbekannt"}.
+Begriffe: "W-Pyramide" mit Spitze n = Sätze n bis 1, hoch bis n, runter bis 1, hoch bis n (Spitze 4: 4-3-2-1-2-3-4-3-2-1-2-3-4 = 34 Wdh.). Der beste Satz einer W-Pyramide ist ihre Spitze.
+Geplante Trainingswoche (Vorlagen):
+${tpls}
+Einheiten pro Woche (letzte 8 Wochen): ${weeks.join("; ")}
+Berechnete Trends (12 Wochen, Ø letzte Einheiten vs. davor):
+${trends.join("\n") || "keine"}
+Trainingslog (16 Wochen, Format: Zusatzgewicht × Wdh je Satz):
+${log || "keine Einträge"}
+
+${bodyContext()}`;
+}
+const SYSTEM = `Du bist der Trainings-Coach in der App "Cali Log" eines Calisthenics-Sportlers (Klimmzüge, Dips, Liegestütze, teils mit Zusatzgewicht). Antworte immer auf Deutsch, direkt und knapp, ohne Floskeln. Sei ehrlich und kritisch: benenne Stagnation, ausgelassene Einheiten und fehlende Progression klar. Stütze jede Aussage auf die mitgelieferten Daten und nenne konkrete Zahlen; wenn Daten fehlen oder zu wenige Einheiten vorliegen, sag das statt zu raten. Mach keine Leistungsversprechen. Bei Schmerzen oder Verletzungsverdacht: Belastung reduzieren und ärztlich abklären lassen. Beispieldaten sind keine echten Leistungen. Formatiere mit kurzen Absätzen und höchstens einer kurzen Liste.
+Ernährung und Gewicht: Empfiehl ein Tempo von höchstens etwa 0,5–1 % Körpergewicht pro Woche und nie weniger als etwa 1500 kcal pro Tag; mehr Defizit lieber über Bewegung. Bei Stagnation trotz niedriger angegebener Kalorien zuerst die Genauigkeit des Trackings prüfen lassen. Betone ausreichend Eiweiß (etwa 1,6–2 g pro kg), Krafttraining, Schlaf und Schritte. Keine Crash-Diäten, keine Entwässerungstricks, keine Appetitzügler. Wenn Hinweise auf ein gestörtes Essverhalten auftauchen, sprich das behutsam an und empfiehl professionelle Unterstützung.`;
+
+function md(s) {
+  const lines = esc(s).split("\n"); let out = "", inList = false;
+  for (let l of lines) {
+    l = l.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, '<span class="mono">$1</span>');
+    const li = /^\s*(?:[-*•]|\d+\.)\s+(.*)$/.exec(l);
+    if (li) { if (!inList) { out += "<ul>"; inList = true; } out += "<li>" + li[1] + "</li>"; continue; }
+    if (inList) { out += "</ul>"; inList = false; }
+    const h = /^#{1,4}\s+(.*)$/.exec(l);
+    if (h) { out += "<p><b>" + h[1] + "</b></p>"; continue; }
+    if (l.trim()) out += "<p>" + l + "</p>";
+  }
+  if (inList) out += "</ul>";
+  return out;
+}
+function vCoach() {
+  const key = S.settings.apiKey;
+  const msgs = S.chat.map((m) => `<div class="msg ${m.role}">${m.role === "assistant" ? md(m.content) : m.role === "err" ? esc(m.content) : esc(m.content).replace(/\n/g, "<br>")}</div>`).join("");
+  return `<header class="bar"><h1>Coach</h1>${S.chat.length ? `<button class="btn ghost sm" data-act="chat-clear">Chat leeren</button>` : ""}</header>
+    ${!key ? `<div class="card"><h2>API-Key fehlt</h2><p class="small">Der Coach nutzt die Claude API mit deinem eigenen Schlüssel. Erstell einen Key in der Claude Console (platform.claude.com → API Keys), setz dort ein Ausgabenlimit und trag ihn unter <b>Mehr</b> ein. Der Key bleibt nur auf diesem Gerät.</p><button class="btn" data-tab="more">Zu den Einstellungen</button></div>` : ""}
+    <div class="card"><p class="small muted">Der Coach sieht deine Vorlagen, die letzten 16 Wochen und die berechneten Trends. Er braucht Internet.</p>
+      <div class="row"><button class="btn sm" data-act="ask" data-q="Bewerte meinen Fortschritt der letzten Wochen je Übung. Wo steigere ich mich, wo stagniere ich, und woran liegt das laut den Daten?"${!key || ui.busy ? " disabled" : ""}>Fortschritt bewerten</button>
+      <button class="btn sm" data-act="ask" data-q="Wo stagniere ich gerade am deutlichsten und was ist die eine Änderung, die ich als Nächstes ausprobieren sollte?"${!key || ui.busy ? " disabled" : ""}>Größte Baustelle</button>
+      <button class="btn sm" data-act="ask" data-q="Schau dir mein Gewicht, meine Kalorien und Schritte an. Schaffe ich mein Gewichtsziel bis zum Zieldatum, und was sollte ich konkret ändern?"${!key || ui.busy ? " disabled" : ""}>Gewichtsziel checken</button></div></div>
+    <div class="chat">${msgs}${ui.busy ? `<div class="msg assistant muted">Coach denkt nach …</div>` : ""}<span id="chatend"></span></div>
+    <div class="composer"><textarea id="c-in" placeholder="Frag den Coach …" ${!key ? "disabled" : ""}></textarea><button class="btn primary" data-act="send" ${!key || ui.busy ? "disabled" : ""}>Senden</button></div>`;
+}
+async function ask(q) {
+  if (!q.trim() || ui.busy) return;
+  S.chat.push({ role: "user", content: q.trim() }); ui.coachDraft = ""; ui.busy = true; save(true); render();
+  const history = S.chat.filter((m) => m.role === "user" || m.role === "assistant").slice(-12);
+  while (history.length && history[0].role !== "user") history.shift();
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": S.settings.apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify({ model: S.settings.model, max_tokens: 1500, system: SYSTEM + "\n\n<daten>\n" + buildContext() + "\n</daten>", messages: history.map((m) => ({ role: m.role, content: m.content })) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = res.status === 401 ? "API-Key ungültig. Bitte unter Mehr prüfen." : res.status === 429 ? "Zu viele Anfragen oder Limit erreicht. Kurz warten." :
+        res.status === 529 || res.status >= 500 ? "Claude ist gerade überlastet. Gleich nochmal versuchen." : (data.error && data.error.message) || "Fehler " + res.status;
+      S.chat.push({ role: "err", content: msg });
+    } else {
+      const text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text).join("\n").trim();
+      S.chat.push({ role: "assistant", content: text || "(keine Antwort)" });
+    }
+  } catch (e) {
+    S.chat.push({ role: "err", content: "Keine Verbindung. Der Coach braucht Internet, alles andere funktioniert offline." });
+  }
+  if (S.chat.length > 60) S.chat = S.chat.slice(-60);
+  ui.busy = false; save(true); if (tab === "coach") render();
+}
+
+// ---------------- Body / weight ----------------
+const KCAL_PER_KG = 7700;
+const KCAL_FLOOR = 1500;
+const PH = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open("cali-log-photos", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("p");
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = (mode, fn) => open().then((db) => new Promise((res, rej) => {
+    const t = db.transaction("p", mode); const req = fn(t.objectStore("p"));
+    t.oncomplete = () => res(req ? req.result : undefined); t.onerror = () => rej(t.error);
+  }));
+  return {
+    get: (k) => tx("readonly", (s) => s.get(k)), put: (k, v) => tx("readwrite", (s) => s.put(v, k)),
+    del: (k) => tx("readwrite", (s) => s.delete(k)), keys: () => tx("readonly", (s) => s.getAllKeys()), clear: () => tx("readwrite", (s) => s.clear()),
+  };
+})();
+const thumbs = {};
+async function loadThumbs() {
+  try { const ks = await PH.keys(); for (const k of ks) if (String(k).startsWith("t:")) thumbs[k.slice(2)] = await PH.get(k); if (tab === "body") render(); } catch (e) {}
+}
+async function compress(file, max, q) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    const sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", q);
+  } finally { URL.revokeObjectURL(url); }
+}
+
+function bodyStats() {
+  const E = S.body.entries;
+  const pts = Object.keys(E).filter((d) => E[d].kg != null).sort().map((d) => ({ d, t: parseISO(d).getTime(), kg: E[d].kg, kcal: E[d].kcal, steps: E[d].steps }));
+  pts.forEach((p) => { const w = pts.filter((q) => q.t <= p.t && q.t > p.t - 7 * DAY); p.avg = sum(w.map((q) => q.kg)) / w.length; });
+  let reg = null;
+  if (pts.length) {
+    const lastT = pts[pts.length - 1].t;
+    const win = pts.filter((p) => p.t > lastT - 28 * DAY);
+    const span = (win[win.length - 1].t - win[0].t) / DAY;
+    if (win.length >= 5 && span >= 7) {
+      const xs = win.map((p) => (p.t - lastT) / DAY), ys = win.map((p) => p.kg);
+      const mx = sum(xs) / xs.length, my = sum(ys) / ys.length;
+      const b = sum(xs.map((x, i) => (x - mx) * (ys[i] - my))) / sum(xs.map((x) => (x - mx) ** 2));
+      const a = my - b * mx;
+      const kc = win.filter((p) => p.kcal > 0);
+      const tdee = kc.length >= 10 ? sum(kc.map((p) => p.kcal)) / kc.length - b * KCAL_PER_KG : null;
+      reg = { a, b, lastT, n: win.length, span, kcalDays: kc.length, avgKcal: kc.length ? sum(kc.map((p) => p.kcal)) / kc.length : null, tdee };
+    }
+  }
+  const cur = reg ? reg.a : pts.length ? pts[pts.length - 1].avg : null;
+  return { pts, reg, cur, at: (t) => (reg ? reg.a + reg.b * ((t - reg.lastT) / DAY) : null) };
+}
+const r50 = (v) => Math.round(v / 50) * 50;
+function bodyPlan(st) {
+  const g = S.body.goal, tips = [];
+  const gT = parseISO(g.date) ? parseISO(g.date).getTime() : null;
+  const daysLeft = gT ? Math.round((gT - today().getTime()) / DAY) : null;
+  if (!st.pts.length) { tips.push(["info", "Wieg dich jeden Morgen nach dem Toilettengang, vor dem Essen und Trinken. Ab etwa 10 Tagen berechnet die App Trend und Prognose."]); return { tips }; }
+  if (!st.reg) { tips.push(["info", `Noch ${Math.max(0, 5 - st.pts.length)} Einträge bzw. mindestens 7 Tage Abstand bis zur ersten Prognose. Tägliche Schwankungen von 0,5–1,5 kg sind normal (Wasser, Salz, Darminhalt).`]); return { tips }; }
+  const R = st.reg, wk = R.b * 7, surplus = R.b * KCAL_PER_KG;
+  const out = { tips, wk, surplus, daysLeft };
+  if (gT && daysLeft > 0 && st.cur > g.kg) {
+    const needDay = (st.cur - g.kg) / daysLeft;
+    out.needWk = needDay * 7; out.pct = (out.needWk / st.cur) * 100;
+    out.gap = (R.b + needDay) * KCAL_PER_KG;
+    out.onTrack = out.gap <= 0;
+    if (out.pct > 1) tips.push(["bad", `Für ${nf(g.kg)} kg bis ${fmtShort(g.date)} bräuchtest du ${nf(out.needWk, 2)} kg pro Woche, das sind über 1 % deines Gewichts. So schnell geht meist Muskulatur und Kraft mit verloren. Realistischer wären 0,5–0,7 % pro Woche.`]);
+    if (out.onTrack) tips.push(["ok", `Du liegst im Plan: Trend ${nf(wk, 2)} kg/Woche, nötig sind ${nf(-out.needWk, 2)} kg/Woche. So weitermachen.`]);
+    else {
+      const gap = r50(out.gap);
+      tips.push(["warn", `Für ${nf(g.kg)} kg am ${fmtShort(g.date)} fehlen dir rechnerisch etwa ${gap} kcal Defizit pro Tag (Trend ${wk >= 0 ? "+" : ""}${nf(wk, 2)} kg/Woche, nötig ${nf(-out.needWk, 2)} kg/Woche).`]);
+      if (R.tdee && R.tdee < 1800) tips.push(["warn", `Rechnerisch läge dein Erhaltungsbedarf nur bei etwa ${r50(R.tdee)} kcal. Für einen aktiven Erwachsenen mit Krafttraining ist das ungewöhnlich niedrig. Wahrscheinlicher sind Lücken beim Tracking. Prüf das zuerst, bevor du weiter reduzierst.`]);
+      if (R.tdee) {
+        const target = r50(R.tdee - needDay * KCAL_PER_KG);
+        if (target >= KCAL_FLOOR) tips.push(["info", `Dein geschätzter Erhaltungsbedarf liegt bei etwa ${r50(R.tdee)} kcal. Für das Ziel wären also rund ${target} kcal pro Tag nötig, abgewogen und vollständig getrackt.`]);
+        else tips.push(["warn", `Rechnerisch wären ${Math.max(0, target)} kcal pro Tag nötig. Geh trotzdem nicht unter etwa ${KCAL_FLOOR} kcal. Den Rest holst du über Bewegung, z. B. rund 4.000 Schritte mehr pro Tag (grob 150–200 kcal), oder du verschiebst das Ziel.`]);
+      } else tips.push(["info", "Trag zwei Wochen lang deine Kalorien abgewogen ein. Dann rechnet die App aus Gewichtstrend und Essen deinen echten Erhaltungsbedarf aus und sagt dir eine konkrete Kalorienzahl."]);
+    }
+  } else if (gT && st.cur <= g.kg) tips.push(["ok", `Ziel erreicht: Trend bei ${nf(st.cur)} kg. Jetzt auf Erhalt gehen und die Kalorien langsam um 100–200 kcal pro Woche anheben.`]);
+  if (wk > 0.1) tips.unshift(["bad", `Der Trend steigt um ${nf(wk, 2)} kg pro Woche. Das entspricht grob ${r50(surplus)} kcal pro Tag über deinem Bedarf. Prüf die letzten Tage auf Extras wie Öl, Getränke, Snacks oder das Wochenende.`]);
+  else if (Math.abs(wk) <= 0.1) tips.unshift(["warn", "Dein Gewicht stagniert. Bei echten 1.600 kcal wäre das ungewöhnlich, meist wird mehr gegessen als notiert. Wieg zwei Wochen lang alles ab, auch Öl, Saucen und Getränke."]);
+  if (R.avgKcal && R.kcalDays >= 10 && R.tdee && R.avgKcal < R.tdee - 1000) tips.push(["warn", "Dein Defizit ist sehr groß. Das kostet auf Dauer Muskeln, Leistung und Energie. Lieber etwas mehr essen und dafür länger durchziehen."]);
+  return out;
+}
+
+function gauge(pct, big, sub) {
+  const N = 46, cx = 75, cy = 72, R1 = 56, R2 = 67;
+  let off = "", on = "";
+  for (let i = 0; i < N; i++) {
+    const f = i / (N - 1), a = ((135 + 270 * f) * Math.PI) / 180;
+    const l = `<line x1="${(cx + R1 * Math.cos(a)).toFixed(1)}" y1="${(cy + R1 * Math.sin(a)).toFixed(1)}" x2="${(cx + R2 * Math.cos(a)).toFixed(1)}" y2="${(cy + R2 * Math.sin(a)).toFixed(1)}"`;
+    if (pct > 0 && f <= pct / 100) on += l + ` style="stroke:var(--ok)" stroke-width="3.2" stroke-linecap="round"/>`;
+    else off += l + ` style="stroke:var(--dim)" stroke-width="3" stroke-linecap="round"/>`;
+  }
+  return `<svg class="gauge" viewBox="0 0 150 140" role="img" aria-label="${Math.round(pct)} Prozent des Ziels">
+    ${off}<g style="filter:drop-shadow(0 0 4px rgba(53,224,140,.75))">${on}</g>
+    <text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="30" font-weight="800" letter-spacing="-1" style="fill:var(--ink)">${big}</text>
+    <text x="${cx}" y="${cy + 24}" text-anchor="middle" font-size="8.5" font-weight="700" letter-spacing="1.4" style="fill:var(--muted)">${sub.toUpperCase()}</text>
+    <text x="${cx}" y="${cy + 62}" text-anchor="middle" font-size="12" font-weight="800" style="fill:var(--ok)">${Math.round(pct)} %</text>
+  </svg>`;
+}
+function vBody() {
+  const B = S.body, g = B.goal, st = bodyStats(), plan = bodyPlan(st);
+  const d = ui.bdate || iso(today()), e = B.entries[d] || {};
+  const startKg = g.startKg, cur = st.cur;
+  const prog = cur != null && startKg > g.kg ? Math.max(0, Math.min(100, ((startKg - cur) / (startKg - g.kg)) * 100)) : 0;
+  const tipCls = { ok: "ok", warn: "warn", bad: "bad", info: "" };
+  const tipWord = { ok: "Im Plan", warn: "Achtung", bad: "Kritisch", info: "Info" };
+  const gT = parseISO(g.date) ? parseISO(g.date).getTime() : null;
+  let fc = "";
+  if (st.reg) {
+    const rows = [[28, "In 4 Wochen"], [56, "In 8 Wochen"], [84, "In 12 Wochen"]].map(([n, l]) => [l, today().getTime() + n * DAY]);
+    if (gT && gT > today().getTime()) rows.push(["Am " + fmtShort(g.date) + " (Ziel)", gT]);
+    rows.sort((x, y) => x[1] - y[1]);
+    fc = `<table class="tbl"><tbody>${rows.map(([l, t]) => { const v = st.at(t); const goalRow = t === gT;
+      return `<tr${goalRow ? ' style="font-weight:650"' : ""}><td>${l}</td><td class="muted">${fmtShort(iso(new Date(t)))}</td><td class="r num"><b class="${goalRow ? (v <= g.kg ? "up" : "down") : ""}">${nf(v)}</b> kg</td></tr>`; }).join("")}</tbody></table>
+      <p class="xs muted">Annahme: Du machst genau so weiter wie in den letzten ${Math.round(st.reg.span)} Tagen. Das ist eine Fortschreibung, keine Garantie.</p>`;
+  }
+  const photoDates = Object.keys(thumbs).sort().reverse();
+  const recent = Object.keys(B.entries).sort().reverse().slice(0, 14);
+  const avgOf = (date) => { const p = st.pts.find((x) => x.d === date); return p ? p.avg : null; };
+  return `<header class="bar"><h1>Gewicht</h1><span class="small muted">Ziel ${nf(g.kg)} kg · ${fmtShort(g.date)}</span></header>
+    ${ui.photoView ? photoOverlay() : ""}
+    <div class="card">
+      <div class="between"><h2>${d === iso(today()) ? "Heute" : fmtD(d)}</h2>${B.entries[d] && B.entries[d].kg != null ? '<span class="chip ok">eingetragen</span>' : ""}</div>
+      <div class="grid2">
+        <div class="field"><label class="label" for="b-kg">Gewicht (kg)</label><input type="text" inputmode="decimal" id="b-kg" value="${e.kg != null ? kgTxt(e.kg) : ""}" placeholder="${cur != null ? kgTxt(Math.round(cur * 10) / 10) : "z. B. 75,2"}" style="font-size:1.4rem;font-weight:700"></div>
+        <div class="field"><label class="label" for="b-date">Datum</label><input type="date" id="b-date" value="${d}" max="${iso(today())}"></div>
+        <div class="field"><label class="label" for="b-kcal">Kalorien (optional)</label><input type="number" inputmode="numeric" id="b-kcal" value="${e.kcal ?? ""}" placeholder="kcal"></div>
+        <div class="field"><label class="label" for="b-steps">Schritte (optional)</label><input type="number" inputmode="numeric" id="b-steps" value="${e.steps ?? ""}" placeholder="z. B. 8000"></div>
+      </div>
+      <div class="row">
+        ${thumbs[d] ? `<img src="${thumbs[d]}" alt="Foto vom ${fmtShort(d)}" class="pthumb" data-act="pview" data-d="${d}">
+          ${ui.phDelAsk === d ? `<button class="btn danger sm" data-act="ph-del-yes" data-d="${d}">Foto löschen</button><button class="btn sm" data-act="ph-del-no">Nein</button>` : `<button class="btn sm ghost" data-act="ph-del" data-d="${d}">Foto entfernen</button>`}`
+          : `<label class="btn sm" for="b-photo" style="display:inline-flex;align-items:center">${ui.phBusy ? "Wird gespeichert …" : "+ Foto"}</label>`}
+        <input type="file" id="b-photo" accept="image/*" hidden>
+        <button class="btn sm" data-act="health-paste">Aus Health einfügen</button>
+      </div>
+      ${pasteBox()}
+      <button class="btn primary block" data-act="b-save">Speichern</button>
+    </div>
+    <div class="card">
+      ${ui.goalEdit ? `<h2>Ziel bearbeiten</h2><div class="grid3">
+          <div class="field"><label class="label" for="g-start">Start kg</label><input type="text" inputmode="decimal" id="g-start" value="${kgTxt(g.startKg)}"></div>
+          <div class="field"><label class="label" for="g-kg">Ziel kg</label><input type="text" inputmode="decimal" id="g-kg" value="${kgTxt(g.kg)}"></div>
+          <div class="field"><label class="label" for="g-date">Bis</label><input type="date" id="g-date" value="${g.date}"></div></div>
+          <div class="row"><button class="btn primary sm" data-act="goal-ok">Übernehmen</button><button class="btn sm" data-act="goal-no">Abbrechen</button></div>`
+      : `<div class="between"><h2>Ziel ${nf(g.kg)} kg · ${fmtShort(g.date)}</h2><button class="btn ghost sm" data-act="goal-edit">Ändern</button></div>
+        <div class="goal">${gauge(prog, cur != null ? nf(cur) : "–", "Trendgewicht kg")}
+          <div class="goal-side">
+            <div class="stat"><span class="muted">Start</span><b class="num">${nf(startKg)} kg</b></div>
+            <div class="stat"><span class="muted">Seit Start</span><b class="num ${cur != null && cur < startKg ? "up" : ""}">${cur != null ? (cur - startKg > 0 ? "+" : "") + nf(cur - startKg) + " kg" : "–"}</b></div>
+            <div class="stat"><span class="muted">Noch</span><b class="num">${cur != null && cur > g.kg ? nf(cur - g.kg) + " kg" : "–"}${plan.daysLeft > 0 ? ` · ${plan.daysLeft} T` : ""}</b></div>
+            ${plan.wk != null ? `<div class="row"><span class="chip ${plan.wk < -0.1 ? "ok" : plan.wk > 0.1 ? "bad" : "warn"}">${plan.wk >= 0 ? "+" : ""}${nf(plan.wk, 2)} kg/Wo</span>${plan.needWk != null ? `<span class="xs muted">nötig −${nf(plan.needWk, 2)}</span>` : ""}</div>` : ""}
+          </div>
+        </div>`}
+    </div>
+    <div class="card">
+      <div class="between"><h2>Verlauf & Prognose</h2></div>
+      <div class="seg" role="group" aria-label="Zeitraum">${[["30", "30 Tage"], ["90", "90 Tage"], ["all", "Alles"]].map(([k, l]) => `<button data-act="b-range" data-v="${k}" aria-pressed="${ui.brange === k}">${l}</button>`).join("")}</div>
+      <div class="chart">${weightChart(st)}</div>
+      <div class="row xs muted" style="gap:12px"><span class="row" style="gap:4px"><span class="sw" style="background:var(--muted);opacity:.5;border-radius:50%"></span>Tageswert</span><span class="row" style="gap:4px"><span class="sw" style="background:var(--accent)"></span>7-Tage-Schnitt</span><span>– – Prognose</span><span style="color:var(--ok)">··· nötiger Weg</span></div>
+      ${fc}
+    </div>
+    <div class="card"><h2>Hinweise</h2>
+      ${plan.tips.map(([lvl, t]) => `<div class="tip"><span class="chip ${tipCls[lvl]}">${tipWord[lvl]}</span><p class="small">${esc(t)}</p></div>`).join("")}
+      ${st.reg && st.reg.tdee ? `<p class="xs muted">Erhaltungsbedarf geschätzt aus ${st.reg.kcalDays} Tagen mit Kalorien: Ø ${r50(st.reg.avgKcal)} kcal gegessen, Trend ${nf(st.reg.b * 7, 2)} kg/Woche. Nur so genau wie dein Tracking.</p>` : ""}
+    </div>
+    <div class="card"><div class="between"><h2>Fotos</h2><span class="xs muted">${photoDates.length} Fotos · Tippen zum Vergleichen</span></div>
+      ${photoDates.length ? `<div class="pgrid">${photoDates.map((pd) => `<button class="ptile" data-act="pview" data-d="${pd}"><img src="${thumbs[pd]}" alt="Foto vom ${fmtShort(pd)}"><span>${fmtShort(pd)}${B.entries[pd] && B.entries[pd].kg != null ? " · " + nf(B.entries[pd].kg) : ""}</span></button>`).join("")}</div>`
+        : `<p class="small muted">Am besten einmal pro Woche, gleiche Uhrzeit, gleiches Licht, gleiche Pose. Die Waage zeigt nicht alles, Fotos zeigen Veränderungen, die die Zahl verschleiert.</p>`}
+    </div>
+    ${recent.length ? `<div class="card"><h2>Einträge</h2><table class="tbl"><thead><tr><th>Datum</th><th class="r">kg</th><th class="r">Ø 7T</th><th class="r">kcal</th><th class="r">Schritte</th><th></th></tr></thead><tbody>
+      ${recent.map((rd) => { const x = B.entries[rd]; return `<tr><td>${fmtD(rd)}${x.photo ? " ◉" : ""}</td><td class="r num">${x.kg != null ? nf(x.kg) : "–"}</td><td class="r num muted">${avgOf(rd) != null ? nf(avgOf(rd)) : "–"}</td><td class="r num">${x.kcal ?? "–"}</td><td class="r num">${x.steps != null ? nf(x.steps, 0) : "–"}</td>
+        <td class="r">${ui.bdelAsk === rd ? `<button class="btn danger sm" data-act="b-del-yes" data-d="${rd}">Löschen</button>` : `<button class="icon-btn" data-act="b-edit" data-d="${rd}" aria-label="Bearbeiten">✎</button><button class="icon-btn" data-act="b-del" data-d="${rd}" aria-label="Löschen">×</button>`}</td></tr>`; }).join("")}
+      </tbody></table></div>` : ""}`;
+}
+
+function weightChart(st) {
+  const g = S.body.goal;
+  if (!st.pts.length) return `<p class="small muted" style="padding:20px 0;text-align:center">Noch keine Einträge</p>`;
+  const now = today().getTime();
+  const lastT = st.pts[st.pts.length - 1].t;
+  const from = ui.brange === "all" ? st.pts[0].t : Math.min(lastT, now) - (+ui.brange) * DAY;
+  const pts = st.pts.filter((p) => p.t >= from);
+  const gT = parseISO(g.date) ? parseISO(g.date).getTime() : null;
+  let to = Math.max(lastT, now);
+  if (st.reg) to = gT && gT > to && gT - to < 150 * DAY ? gT : to + 56 * DAY;
+  const t0 = pts.length ? pts[0].t : from;
+  const fx = st.reg ? [[Math.max(lastT, t0), st.at(Math.max(lastT, t0))], [to, st.at(to)]] : [];
+  const ys = pts.map((p) => p.kg).concat(fx.map((f) => f[1]), [g.kg]);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  lo = Math.floor(lo - 0.5); hi = Math.ceil(hi + 0.5);
+  const W = 340, H = 210, L = 30, R = 8, T = 10, B = 24;
+  const x = (t) => L + ((t - t0) / Math.max(DAY, to - t0)) * (W - L - R);
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const step = niceStep((hi - lo) / 4);
+  let s = "";
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line)"/><text x="${L - 4}" y="${y(v) + 3.5}" text-anchor="end" font-size="10" style="fill:var(--muted)">${nf(v)}</text>`;
+  }
+  if (now >= t0 && now <= to) s += `<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H - B}" style="stroke:var(--muted)" stroke-dasharray="2 3" opacity=".6"/><text x="${x(now)}" y="${H - B + 20}" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">heute</text>`;
+  [t0, to].forEach((t, i) => (s += `<text x="${x(t)}" y="${H - 6}" text-anchor="${i ? "end" : "start"}" font-size="10" style="fill:var(--muted)">${fmtShort(iso(new Date(t)))}</text>`));
+  s += `<line x1="${L}" x2="${W - R}" y1="${y(g.kg)}" y2="${y(g.kg)}" style="stroke:var(--ok)" stroke-width="1" opacity=".7"/><text x="${L + 4}" y="${y(g.kg) - 4}" font-size="10" font-weight="700" style="fill:var(--ok)">Ziel ${nf(g.kg)}</text>`;
+  if (gT && gT >= t0 && gT <= to) s += `<circle cx="${x(gT)}" cy="${y(g.kg)}" r="4" style="fill:var(--ok)"/>`;
+  pts.forEach((p) => (s += `<circle cx="${x(p.t)}" cy="${y(p.kg)}" r="2.6" style="fill:var(--muted)" opacity=".45"><title>${fmtD(p.d)}: ${nf(p.kg)} kg</title></circle>`));
+  if (pts.length > 1) {
+    s += `<defs><linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.35"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient></defs>`;
+    s += `<path d="M${x(pts[0].t)},${y(lo)} ${pts.map((p) => "L" + x(p.t) + "," + y(p.avg)).join(" ")} L${x(pts[pts.length - 1].t)},${y(lo)} Z" fill="url(#wgrad)"/>`;
+    s += `<polyline points="${pts.map((p) => x(p.t) + "," + y(p.avg)).join(" ")}" fill="none" style="stroke:var(--accent);filter:drop-shadow(0 0 6px var(--accent))" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  if (st.reg) {
+    s += `<line x1="${x(fx[0][0])}" y1="${y(fx[0][1])}" x2="${x(fx[1][0])}" y2="${y(fx[1][1])}" style="stroke:var(--accent)" stroke-width="2" stroke-dasharray="6 5" opacity=".8"/>`;
+    s += `<text x="${x(fx[1][0]) - 2}" y="${y(fx[1][1]) + (fx[1][1] > g.kg ? -6 : 14)}" text-anchor="end" font-size="10.5" font-weight="700" style="fill:var(--accent)">${nf(fx[1][1])}</text>`;
+    if (gT && gT > lastT && st.cur > g.kg) s += `<line x1="${x(lastT)}" y1="${y(st.cur)}" x2="${x(gT)}" y2="${y(g.kg)}" style="stroke:var(--ok)" stroke-width="1.6" stroke-dasharray="1.5 4" stroke-linecap="round"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gewichtsverlauf mit Prognose">${s}</svg>`;
+}
+
+function photoOverlay() {
+  const d = ui.photoView, all = Object.keys(thumbs).sort(), first = all[0];
+  const idx = all.indexOf(d), cmp = ui.photoCmp && first && first !== d;
+  const kg = (pd) => (S.body.entries[pd] && S.body.entries[pd].kg != null ? nf(S.body.entries[pd].kg) + " kg" : "");
+  return `<div class="overlay" role="dialog" aria-label="Foto">
+    <div class="between" style="padding:10px 0"><b>${fmtD(d)} ${kg(d)}</b><button class="btn sm" data-act="pclose">Schließen</button></div>
+    <div class="pcomp${cmp ? " two" : ""}">
+      ${cmp ? `<figure><img id="pv-a" data-full="${first}" src="${thumbs[first]}" alt="Erstes Foto"><figcaption>${fmtShort(first)} · ${kg(first)}</figcaption></figure>` : ""}
+      <figure><img id="pv-b" data-full="${d}" src="${thumbs[d]}" alt="Foto vom ${fmtShort(d)}"><figcaption>${fmtShort(d)} · ${kg(d)}</figcaption></figure>
+    </div>
+    <div class="row" style="justify-content:center;padding:10px 0">
+      <button class="btn sm" data-act="pview" data-d="${all[idx - 1] || d}" ${idx <= 0 ? "disabled" : ""}>‹ Älter</button>
+      ${first && first !== d ? `<button class="btn sm" data-act="pcmp">${cmp ? "Einzeln" : "Mit erstem Foto vergleichen"}</button>` : ""}
+      <button class="btn sm" data-act="pview" data-d="${all[idx + 1] || d}" ${idx >= all.length - 1 ? "disabled" : ""}>Neuer ›</button>
+    </div></div>`;
+}
+async function fillFullPhotos() {
+  for (const id of ["pv-a", "pv-b"]) {
+    const el = document.getElementById(id); if (!el) continue;
+    try { const f = await PH.get("f:" + el.dataset.full); if (f && document.getElementById(id) === el) el.src = f; } catch (e) {}
+  }
+}
+async function savePhoto(file, date) {
+  ui.phBusy = true; render();
+  try {
+    const full = await compress(file, 1280, 0.82), th = await compress(file, 320, 0.75);
+    await PH.put("f:" + date, full); await PH.put("t:" + date, th);
+    thumbs[date] = th;
+    S.body.entries[date] = Object.assign(S.body.entries[date] || {}, { photo: true });
+    save(true); toast("Foto gespeichert.");
+  } catch (e) { toast("Foto konnte nicht gespeichert werden."); }
+  ui.phBusy = false; render();
+}
+function bodyContext() {
+  const st = bodyStats(), g = S.body.goal, plan = bodyPlan(st);
+  const since = today().getTime() - 42 * DAY;
+  const lines = st.pts.filter((p) => p.t >= since).map((p) => `${p.d}: ${p.kg} kg (Ø7 ${p.avg.toFixed(1)})${p.kcal ? ", " + p.kcal + " kcal" : ""}${p.steps ? ", " + p.steps + " Schritte" : ""}`).join("\n");
+  return `Gewichtsziel: von ${g.startKg} kg auf ${g.kg} kg bis ${g.date} (Challenge).
+Trendgewicht: ${st.cur != null ? st.cur.toFixed(1) + " kg" : "unbekannt"}; Trend ${st.reg ? (st.reg.b * 7).toFixed(2) + " kg/Woche" : "zu wenig Daten"}; nötig ${plan.needWk != null ? (-plan.needWk).toFixed(2) + " kg/Woche" : "–"}.
+Geschätzter Erhaltungsbedarf: ${st.reg && st.reg.tdee ? Math.round(st.reg.tdee) + " kcal (aus " + st.reg.kcalDays + " Tagen)" : "nicht berechenbar"}. Der Nutzer gibt an, etwa 1600 kcal zu essen und seit Monaten bei ~75 kg zu stagnieren.
+Gewichtslog (6 Wochen):
+${lines || "keine Einträge"}`;
+}
+
+// ---------------- More view ----------------
+function vMore() {
+  const s = S.settings;
+  const nSample = S.workouts.filter((w) => w.sample).length;
+  return `<header class="bar"><h1>Mehr</h1></header>
+    <div class="card"><h2>Profil</h2>
+      <div class="field"><label class="label" for="st-name">Name</label><input type="text" id="st-name" data-st="name" value="${esc(s.name || "")}" placeholder="Wie soll die App dich nennen?"></div>
+      <div class="field"><label class="label" for="st-bw">Körpergewicht (kg)</label><input type="text" inputmode="decimal" id="st-bw" data-st="bw" value="${s.bw != null ? kgTxt(s.bw) : ""}" placeholder="z. B. 78"><span class="xs muted">Für das geschätzte 1RM. Pro Training überschreibbar.</span></div></div>
+    <div class="card"><h2>KI-Coach</h2>
+      <div class="field"><label class="label" for="st-key">Claude API-Key</label>
+        <div class="row" style="flex-wrap:nowrap"><input type="${ui.keyVisible ? "text" : "password"}" id="st-key" data-st="apiKey" value="${esc(s.apiKey)}" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="btn sm" data-act="keyvis">${ui.keyVisible ? "Verbergen" : "Zeigen"}</button></div>
+        <span class="xs muted">Wird nur auf diesem Gerät gespeichert und nur an api.anthropic.com gesendet.</span></div>
+      <div class="field"><label class="label" for="st-model">Modell</label><select id="st-model" data-st="model">
+        <option value="claude-haiku-5-5"${s.model === "claude-haiku-5-5" ? " selected" : ""}>Claude Haiku 5.5 · günstig, schnell</option>
+        <option value="claude-sonnet-5-5"${s.model === "claude-sonnet-5-5" ? " selected" : ""}>Claude Sonnet 5.5 · gründlicher</option></select></div></div>
+    <div class="card"><h2>Übungen</h2>
+      <div class="row">${S.exercises.map((e) => `<span class="chip"><span class="sw" style="background:${e.color}"></span>${esc(e.name)}</span>`).join("")}</div>
+      <div class="row" style="flex-wrap:nowrap"><input type="text" id="new-ex" placeholder="Neue Übung, z. B. Muscle-up"><button class="btn sm" data-act="addexercise">Hinzufügen</button></div></div>
+    <div class="card"><h2>Vorlagen</h2>
+      ${S.templates.map((t) => `<div class="between"><span><b>${esc(t.name)}</b><br><span class="xs muted">${t.blocks.map((b) => esc(exById(b.ex).name + (b.label ? " " + b.label : "") + (b.kg ? " +" + b.kg + " kg" : ""))).join(", ")}</span></span>
+        ${ui.tplDel === t.id ? `<span class="row"><button class="btn danger sm" data-act="tpl-del-yes" data-id="${t.id}">Löschen</button><button class="btn sm" data-act="tpl-del-no">Nein</button></span>` : `<button class="btn sm ghost" data-act="tpl-del" data-id="${t.id}">Löschen</button>`}</div>`).join("")}
+      <p class="xs muted">Neue Vorlage: Training wie gewünscht aufbauen und unten auf „Aufbau als Vorlage speichern“ tippen. Gleicher Name überschreibt die alte Vorlage.</p></div>
+    <div class="card"><h2>Backup</h2>
+      <p class="small muted">Deine Daten liegen nur auf diesem Gerät. Exportier regelmäßig ein Backup in die Dateien-App.</p>
+      <div class="row"><button class="btn sm" data-act="export">Backup exportieren</button><label class="btn sm" for="imp" style="display:inline-flex;align-items:center">Backup importieren</label><input type="file" id="imp" accept="application/json,.json" hidden></div>
+      ${nSample ? `<div class="row"><span class="small">${nSample} Beispiel-Einheiten aktiv</span><button class="btn sm" data-act="sample-del">Beispieldaten löschen</button></div>` : ""}
+      ${ui.wipeAsk ? `<div class="row"><span class="small">Alles löschen, auch Vorlagen und Chat?</span><button class="btn danger sm" data-act="wipe-yes">Ja, alles löschen</button><button class="btn sm" data-act="wipe-no">Nein</button></div>`
+        : `<button class="btn danger sm" data-act="wipe">Alle Daten löschen</button>`}</div>
+    <p class="xs muted" style="text-align:center">Cali Log · ${S.workouts.length} Einheiten gespeichert</p>`;
+}
+
+// ---------------- actions ----------------
+function startDraft(tplId, date) {
+  const t = S.templates.find((x) => x.id === tplId);
+  S.draft = { id: uid(), tpl: tplId || null, name: t ? t.name : "Freies Training", date: date || iso(today()), bw: null, rpe: null, note: "",
+    blocks: t ? t.blocks.map((b) => ({ ex: b.ex, label: b.label || "", n: b.n || 3, peak: b.peak || null, kgDefault: b.kg || 0, sets: [] })) : [] };
+  ui.quick = {}; ui.wpeak = {}; ui.rsel = {}; ui.addEx = !t; ui.discardAsk = false;
+}
+function sampleData() {
+  const out = []; const bw = 78; const start = new Date(today().getTime() - 8 * 7 * DAY);
+  const ws = weekStart(start);
+  for (let w = 0; w < 8; w++) {
+    const mo = new Date(ws); mo.setDate(mo.getDate() + w * 7);
+    const mk = (offset, tpl, name, blocks) => { const d = new Date(mo); d.setDate(d.getDate() + offset); if (d >= today()) return;
+      out.push({ id: uid(), sample: true, tpl, name, date: iso(d), bw, rpe: 7, note: "", created: d.getTime(), blocks }); };
+    const rep = (n, r, kg = 0) => Array.from({ length: n }, () => ({ reps: r, kg }));
+    mk(0, "mo", "Mo · EMOM", [{ ex: "pu", label: "EMOM", sets: rep(10, 4 + Math.floor(w / 3)) }, { ex: "dip", label: "EMOM", sets: rep(10, 6 + Math.floor(w / 3)) }, { ex: "push", label: "EMOM", sets: rep(10, 10 + Math.floor(w / 2)) }]);
+    if (w % 2 === 0) mk(2, "mi", "Mi · Zirkel", [{ ex: "pu", label: "Zirkel", sets: rep(10, 5) }, { ex: "dip", label: "Zirkel", sets: rep(10, 8) }, { ex: "push", label: "Zirkel", sets: rep(10, 12) }]);
+    const kgP = 15 + (w >= 5 ? 2.5 : 0);
+    mk(4, "fr", "Fr · Schwer", [
+      { ex: "pu", label: "Gewichtet", sets: [{ reps: 5 + (w >= 3 && w < 5 ? 1 : 0), kg: kgP }, { reps: 4 + (w >= 2 ? 1 : 0), kg: kgP }, { reps: 4, kg: kgP }] },
+      { ex: "dip", label: "Gewichtet", sets: [{ reps: 8, kg: 25 }, { reps: 7, kg: 25 }, { reps: 6 + (w >= 4 ? 1 : 0), kg: 25 }] },
+      { ex: "pu", label: "W-Pyramide", sets: wPyramid(w >= 6 ? 5 : 4).map((r) => ({ reps: r, kg: 0 })) }, { ex: "dip", label: "W-Pyramide", sets: wPyramid(6).map((r) => ({ reps: r, kg: 0 })) }]);
+  }
+  return out;
+}
+async function exportBackup() {
+  const photos = {};
+  try { for (const k of await PH.keys()) photos[k] = await PH.get(k); } catch (e) {}
+  const json = JSON.stringify({ app: "cali-log", exported: new Date().toISOString(), data: { ...S, settings: { ...S.settings, apiKey: "" } }, photos });
+  const name = "cali-log-backup-" + iso(today()) + ".json";
+  const file = new File([json], name, { type: "application/json" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; }
+  } catch (e) { if (e && e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+
+document.addEventListener("click", (ev) => {
+  const tb = ev.target.closest("[data-tab]");
+  if (tb) { tab = tb.dataset.tab; window.scrollTo(0, 0); render(); return; }
+  const a = ev.target.closest("[data-act]"); if (!a) return;
+  const act = a.dataset.act, d = S.draft;
+  const bi = a.dataset.b != null ? +a.dataset.b : null;
+  switch (act) {
+    case "start": startDraft(a.dataset.tpl, (document.getElementById("new-date") || {}).value); tab = "train"; window.scrollTo(0, 0); break;
+    case "health-paste": pasteHealth(); return;
+    case "health-apply": { const el = document.getElementById("hp-text"); if (el && applyHealth(el.value)) break; return; }
+    case "health-cancel": ui.pasteOpen = false; break;
+    case "go-weigh": tab = "body"; ui.bdate = null; ui.photoView = null; ui.focus = a.dataset.f === "kcal" ? "b-kcal" : "b-kg"; window.scrollTo(0, 0); break;
+    case "discard": ui.discardAsk = true; break;
+    case "discard-no": ui.discardAsk = false; break;
+    case "discard-yes": S.draft = null; ui.discardAsk = false; break;
+    case "addex": ui.addEx = true; break;
+    case "addex-no": ui.addEx = false; break;
+    case "addex-ok": d.blocks.push({ ex: document.getElementById("ax-ex").value, label: document.getElementById("ax-label").value.trim(), n: 3, kgDefault: 0, sets: [] }); ui.addEx = false; break;
+    case "rmblock": d.blocks.splice(bi, 1); ui.quick = {}; ui.wpeak = {}; ui.rsel = {}; break;
+    case "addset": { const b = d.blocks[bi]; const l = b.sets[b.sets.length - 1]; b.sets.push(l ? { reps: l.reps, kg: l.kg } : { reps: null, kg: b.kgDefault || 0 }); break; }
+    case "rmset": d.blocks[bi].sets.splice(+a.dataset.s, 1); break;
+    case "quick": {
+      const g = (f) => num(document.getElementById(`q-${bi}-${f}`).value);
+      const n = Math.max(1, Math.min(60, Math.round(g("n") || 0))), r = g("r"), kg = g("k") || 0;
+      if (r == null) { toast("Bitte Wiederholungen pro Satz eintragen."); return; }
+      for (let i = 0; i < n; i++) d.blocks[bi].sets.push({ reps: Math.round(r), kg });
+      ui.quick[bi] = { n, reps: r, kg }; break;
+    }
+    case "r-sel": case "r-take": case "r-fill": case "r-step": case "r-all": case "r-rounds": {
+      const b = d.blocks[bi], R = roundInfo(b, lastBlock(b.ex, b.label, d.editing));
+      const mk = (arr) => arr.map((r) => ({ reps: Math.max(0, r), kg: R.kg }));
+      if (act === "r-sel") { if (!b.sets.length) { if (!R.sug) return; b.sets = mk(R.sug); } ui.rsel[bi] = +a.dataset.k; }
+      else if (act === "r-take") b.sets = mk(a.dataset.mode === "last" ? R.lastFit : R.sug);
+      else if (act === "r-fill") {
+        const n = Math.max(1, Math.min(60, Math.round(num(document.getElementById(`r-${bi}-n`).value) || 10)));
+        const r = num(document.getElementById(`r-${bi}-r`).value);
+        if (r == null) { toast("Bitte Wiederholungen pro Runde eintragen."); return; }
+        b.sets = mk(Array(n).fill(Math.round(r)));
+      }
+      else if (act === "r-step") { const k = Math.min(ui.rsel[bi] ?? b.sets.length - 1, b.sets.length - 1); b.sets[k].reps = Math.max(0, (b.sets[k].reps || 0) + +a.dataset.d); }
+      else if (act === "r-all") b.sets.forEach((x) => (x.reps = Math.max(0, (x.reps || 0) + +a.dataset.d)));
+      else if (act === "r-rounds") {
+        if (+a.dataset.d > 0) { const l = b.sets[b.sets.length - 1]; b.sets.push({ reps: l ? l.reps : 0, kg: R.kg }); }
+        else if (b.sets.length > 1) b.sets.pop();
+        if (ui.rsel[bi] != null && ui.rsel[bi] >= b.sets.length) ui.rsel[bi] = b.sets.length - 1;
+      }
+      b.n = b.sets.length || b.n; break;
+    }
+    case "b-save": {
+      const date = document.getElementById("b-date").value;
+      if (!parseISO(date)) { toast("Bitte ein gültiges Datum wählen."); return; }
+      const kg = num(document.getElementById("b-kg").value), kcal = num(document.getElementById("b-kcal").value), steps = num(document.getElementById("b-steps").value);
+      if (kg != null && (kg < 30 || kg > 250)) { toast("Gewicht bitte in kg zwischen 30 und 250."); return; }
+      if (kg == null && kcal == null && steps == null && !(S.body.entries[date] && S.body.entries[date].photo)) { toast("Trag mindestens Gewicht, Kalorien oder Schritte ein."); return; }
+      S.body.entries[date] = Object.assign(S.body.entries[date] || {}, { kg: kg != null ? Math.round(kg * 10) / 10 : null, kcal: kcal != null ? Math.round(kcal) : null, steps: steps != null ? Math.round(steps) : null });
+      ui.bdate = null; save(true); toast("Gespeichert."); break;
+    }
+    case "b-edit": ui.bdate = a.dataset.d; window.scrollTo(0, 0); break;
+    case "b-del": ui.bdelAsk = a.dataset.d; break;
+    case "b-del-yes": { const dd = a.dataset.d; delete S.body.entries[dd]; delete thumbs[dd]; PH.del("f:" + dd).catch(() => {}); PH.del("t:" + dd).catch(() => {}); ui.bdelAsk = null; save(); break; }
+    case "b-range": ui.brange = a.dataset.v; break;
+    case "goal-edit": ui.goalEdit = true; break;
+    case "goal-no": ui.goalEdit = false; break;
+    case "goal-ok": {
+      const st = num(document.getElementById("g-start").value), gk = num(document.getElementById("g-kg").value), gd = document.getElementById("g-date").value;
+      if (!st || !gk || !parseISO(gd)) { toast("Bitte Start, Ziel und Datum ausfüllen."); return; }
+      S.body.goal = { startKg: st, kg: gk, date: gd }; ui.goalEdit = false; save(); break;
+    }
+    case "pview": ui.photoView = a.dataset.d; window.scrollTo(0, 0); break;
+    case "pclose": ui.photoView = null; break;
+    case "pcmp": ui.photoCmp = !ui.photoCmp; break;
+    case "ph-del": ui.phDelAsk = a.dataset.d; break;
+    case "ph-del-no": ui.phDelAsk = null; break;
+    case "ph-del-yes": { const dd = a.dataset.d; delete thumbs[dd]; PH.del("f:" + dd).catch(() => {}); PH.del("t:" + dd).catch(() => {}); if (S.body.entries[dd]) S.body.entries[dd].photo = false; ui.phDelAsk = null; save(); break; }
+    case "wfill": {
+      const peak = num(document.getElementById(`w-${bi}-p`).value);
+      if (!peak || peak < 1) { toast("Bitte eine Spitze ab 1 eintragen."); return; }
+      const kg = num(document.getElementById(`w-${bi}-k`).value) || 0;
+      const b = d.blocks[bi];
+      b.sets = b.sets.concat(wPyramid(peak).map((r) => ({ reps: r, kg })));
+      b.peak = Math.round(peak); ui.wpeak[bi] = Math.round(peak); break;
+    }
+    case "finish": {
+      d.blocks.forEach((b) => (b.sets = b.sets.filter((s) => s.reps != null && s.reps > 0)));
+      const blocks = d.blocks.filter((b) => b.sets.length).map((b) => ({ ex: b.ex, label: b.label, sets: b.sets }));
+      if (!blocks.length) { toast("Noch keine Sätze eingetragen."); render(); return; }
+      if (!parseISO(d.date)) { toast("Bitte ein gültiges Datum wählen."); return; }
+      const w = { id: d.editing || d.id, tpl: d.tpl, name: d.name, date: d.date, bw: d.bw, rpe: d.rpe, note: d.note, blocks, created: d.created || Date.now() };
+      const prs = detectPRs(w);
+      S.workouts = S.workouts.filter((x) => x.id !== w.id).concat([w]);
+      if (d.bw) S.settings.bw = d.bw;
+      S.draft = null; save(true);
+      toast(prs.length ? "Gespeichert. " + prs.join(" · ") : "Training gespeichert.", prs.length ? 4500 : 2200);
+      tab = "hist"; ui.histOpen = w.id; break;
+    }
+    case "savetpl": {
+      const name = (d.name || "").trim() || "Vorlage";
+      const blocks = d.blocks.map((b) => ({ ex: b.ex, label: b.label, n: b.sets.length || b.n || 3, peak: isW(b.label) ? (b.sets.length ? Math.max(...b.sets.map((x) => x.reps || 0)) : b.peak || 4) : undefined, reps: null, kg: (b.sets[0] && b.sets[0].kg) || b.kgDefault || 0 }));
+      const ex = S.templates.find((t) => t.name === name);
+      if (ex) { ex.blocks = blocks; } else S.templates.push({ id: uid(), name, note: "", blocks });
+      save(); toast("Vorlage „" + name + "“ gespeichert."); return;
+    }
+    case "hopen": ui.histOpen = ui.histOpen === a.dataset.id ? null : a.dataset.id; ui.delAsk = null; break;
+    case "del": ui.delAsk = a.dataset.id; break;
+    case "del-no": ui.delAsk = null; break;
+    case "del-yes": S.workouts = S.workouts.filter((w) => w.id !== a.dataset.id); ui.delAsk = null; save(); break;
+    case "edit": case "dup": {
+      const w = S.workouts.find((x) => x.id === a.dataset.id); if (!w) return;
+      if (S.draft && !confirmReplace()) return;
+      const c = JSON.parse(JSON.stringify(w));
+      S.draft = { ...c, id: act === "edit" ? w.id : uid(), editing: act === "edit" ? w.id : null, created: act === "edit" ? w.created : null,
+        date: act === "edit" ? w.date : iso(today()), note: act === "edit" ? w.note : "", blocks: c.blocks.map((b) => ({ ...b, n: b.sets.length, kgDefault: (b.sets[0] && b.sets[0].kg) || 0 })) };
+      ui.quick = {}; tab = "train"; window.scrollTo(0, 0); break;
+    }
+    case "p-ex": ui.prog.ex = a.dataset.v; ui.prog.label = null; break;
+    case "p-range": ui.prog.range = a.dataset.v; break;
+    case "sample": S.workouts = S.workouts.concat(sampleData()); save(); toast("Beispieldaten geladen. Unter Mehr wieder löschbar."); break;
+    case "sample-del": S.workouts = S.workouts.filter((w) => !w.sample); save(); toast("Beispieldaten gelöscht."); break;
+    case "ask": ask(a.dataset.q); return;
+    case "send": { const ta = document.getElementById("c-in"); ask(ta.value); return; }
+    case "chat-clear": S.chat = []; save(); break;
+    case "keyvis": ui.keyVisible = !ui.keyVisible; break;
+    case "addexercise": {
+      const n = document.getElementById("new-ex").value.trim(); if (!n) return;
+      if (S.exercises.some((e) => e.name.toLowerCase() === n.toLowerCase())) { toast("Gibt es schon."); return; }
+      S.exercises.push({ id: "x" + uid(), name: n, color: "var(--ex-other)" }); save(); break;
+    }
+    case "tpl-del": ui.tplDel = a.dataset.id; break;
+    case "tpl-del-no": ui.tplDel = null; break;
+    case "tpl-del-yes": S.templates = S.templates.filter((t) => t.id !== a.dataset.id); ui.tplDel = null; save(); break;
+    case "export": exportBackup(); return;
+    case "wipe": ui.wipeAsk = true; break;
+    case "wipe-no": ui.wipeAsk = false; break;
+    case "wipe-yes": { const key = S.settings.apiKey; S = fresh(); S.settings.apiKey = key; ui.wipeAsk = false; PH.clear().catch(() => {}); for (const k in thumbs) delete thumbs[k]; save(true); toast("Alle Daten gelöscht."); break; }
+  }
+  save(); render();
+});
+let replaceOk = false;
+function confirmReplace() { if (replaceOk) { replaceOk = false; return true; } replaceOk = true; toast("Ein Training läuft noch. Nochmal tippen, um es zu ersetzen.", 3500); setTimeout(() => (replaceOk = false), 3500); return false; }
+
+document.addEventListener("input", (ev) => {
+  const t = ev.target, d = S.draft;
+  if (t.id === "c-in") { ui.coachDraft = t.value; return; }
+  if (!d) return;
+  if (t.dataset.d) {
+    const f = t.dataset.d;
+    d[f] = f === "bw" || f === "rpe" ? num(t.value) : t.value; save(); return;
+  }
+  if (t.dataset.b != null && t.dataset.f) {
+    const b = d.blocks[+t.dataset.b];
+    if (t.dataset.f === "label") { b.label = t.value; save(); return; }
+    const s = b.sets[+t.dataset.s]; if (!s) return;
+    const v = num(t.value);
+    s[t.dataset.f] = t.dataset.f === "reps" ? (v == null ? null : Math.max(0, Math.round(v))) : (v || 0);
+    const el = document.getElementById("sum-" + t.dataset.b); if (el) el.textContent = blockReps(b);
+    const tot = document.getElementById("d-total"); if (tot) tot.textContent = sum(d.blocks.map(blockReps));
+    save(); return;
+  }
+  if (t.dataset.w != null) {
+    const i = +t.dataset.w, v = num(t.value); ui.wpeak[i] = v;
+    const el = document.getElementById(`w-${i}-prev`);
+    if (el && v >= 1 && v <= 20) { const sq = wPyramid(v); el.innerHTML = `<span class="mono">${sq.join("-")}</span> = ${sq.length} Sätze, ${sum(sq)} Wdh.`; }
+    return;
+  }
+  if (t.dataset.q != null) { const i = +t.dataset.q; ui.quick[i] = ui.quick[i] || { n: "", reps: "", kg: "" }; ui.quick[i][t.dataset.f] = t.value; }
+});
+document.addEventListener("change", (ev) => {
+  const t = ev.target;
+  if (t.dataset.p) { ui.prog[t.dataset.p] = t.value; render(); return; }
+  if (t.dataset.st) {
+    const f = t.dataset.st; S.settings[f] = f === "bw" ? num(t.value) : t.value.trim(); save(true); if (f !== "apiKey" && f !== "name") render(); return;
+  }
+  if (t.id === "b-date") { ui.bdate = t.value; render(); return; }
+  if (t.id === "h-photo" && t.files && t.files[0]) { savePhoto(t.files[0], iso(today())); return; }
+  if (t.id === "b-photo" && t.files && t.files[0]) { const dd = (document.getElementById("b-date") || {}).value || iso(today()); savePhoto(t.files[0], dd); return; }
+  if (t.id === "imp" && t.files && t.files[0]) {
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const j = JSON.parse(r.result); const data = j.data || j;
+        if (!Array.isArray(data.workouts)) throw new Error("format");
+        const key = S.settings.apiKey;
+        S = Object.assign(fresh(), data); S.settings = Object.assign(fresh().settings, data.settings || {}); if (!S.settings.apiKey) S.settings.apiKey = key;
+        S.body = Object.assign(fresh().body, data.body || {});
+        save(true);
+        const ph = j.photos || {};
+        (Object.keys(ph).length ? PH.clear().then(() => Promise.all(Object.entries(ph).map(([k, v]) => PH.put(k, v)))) : Promise.resolve())
+          .then(() => { for (const k in thumbs) delete thumbs[k]; return loadThumbs(); }).catch(() => {});
+        toast("Backup importiert: " + S.workouts.length + " Einheiten, " + Object.keys(S.body.entries).length + " Gewichtseinträge."); render();
+      } catch (e) { toast("Datei ist kein gültiges Cali-Log-Backup."); }
+    };
+    r.readAsText(t.files[0]);
+  }
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.id === "c-in" && ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); ask(ev.target.value); }
+});
+window.addEventListener("pagehide", () => save(true));
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(true); });
+
+if (S.draft) tab = "train";
+render();
+loadThumbs();
+
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+// test hook
+window.__cali = { parseHealth, metricOf, trend, series, detectPRs, sampleData, get S() { return S; } };
+})();
+</script>
+</body>
+</html>
